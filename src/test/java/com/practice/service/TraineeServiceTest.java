@@ -1,6 +1,7 @@
 package com.practice.service;
 
 import com.practice.dao.TraineeDao;
+import com.practice.dao.TrainerDao;
 import com.practice.entity.Trainee;
 import com.practice.utility.ServiceUtility;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,9 @@ class TraineeServiceTest {
     @Mock
     private TraineeDao traineeDao;
 
+    @Mock
+    private TrainerDao trainerDao;
+
     @InjectMocks
     private TraineeService traineeService;
 
@@ -41,21 +45,23 @@ class TraineeServiceTest {
 
             utility.when(() ->
                             ServiceUtility.generateUserName(anyString(), anyString(), anyList()))
-                    .thenReturn("john.doe");
+                    .thenReturn("John.Doe");
 
             utility.when(ServiceUtility::generatePassword)
                     .thenReturn("password");
 
             when(traineeDao.findAll()).thenReturn(List.of());
+            when(trainerDao.findAll()).thenReturn(List.of());
             when(traineeDao.create(any(Trainee.class))).thenReturn(saved);
 
             Long result = traineeService.create(trainee);
 
             assertEquals(1L, result);
-            assertEquals("john.doe", trainee.getUserName());
+            assertEquals("John.Doe", trainee.getUserName());
             assertEquals("password", trainee.getPassword());
 
             verify(traineeDao).create(trainee);
+            verify(trainerDao).findAll();
         }
     }
 

@@ -1,5 +1,6 @@
 package com.practice.service;
 
+import com.practice.dao.TraineeDao;
 import com.practice.dao.TrainerDao;
 import com.practice.dao.TrainingTypeDao;
 import com.practice.entity.Trainer;
@@ -27,6 +28,9 @@ class TrainerServiceTest {
     private TrainerDao trainerDao;
 
     @Mock
+    private TraineeDao traineeDao;
+
+    @Mock
     private TrainingTypeDao trainingTypeDao;
 
     @InjectMocks
@@ -52,6 +56,9 @@ class TrainerServiceTest {
 
         when(trainerDao.create(any(Trainer.class)))
                 .thenReturn(saved);
+
+        when(traineeDao.findAll())
+                .thenReturn(List.of());
 
         try (MockedStatic<ServiceUtility> utility =
                      Mockito.mockStatic(ServiceUtility.class)) {

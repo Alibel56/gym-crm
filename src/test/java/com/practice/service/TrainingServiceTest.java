@@ -1,5 +1,7 @@
 package com.practice.service;
 
+import com.practice.dao.TraineeDao;
+import com.practice.dao.TrainerDao;
 import com.practice.dao.TrainingDao;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
@@ -25,10 +27,10 @@ class TrainingServiceTest {
     private TrainingDao trainingDao;
 
     @Mock
-    private TrainerService trainerService;
+    private TrainerDao trainerDao;
 
     @Mock
-    private TraineeService traineeService;
+    private TraineeDao traineeDao;
 
     @InjectMocks
     private TrainingService trainingService;
@@ -48,19 +50,21 @@ class TrainingServiceTest {
         Training saved = new Training();
         saved.setId(100L);
 
-        when(trainerService.findById(1L))
+        when(trainerDao.findById(1L))
                 .thenReturn(Optional.of(trainer));
 
-        when(traineeService.findById(2L))
-                .thenReturn(Optional.of(mock(Trainee.class)));
+        when(traineeDao.findById(2L))
+                .thenReturn(Optional.of(new Trainee()));
 
-        when(trainingDao.create(training))
+        when(trainingDao.create(any(Training.class)))
                 .thenReturn(saved);
 
         Long result = trainingService.create(training);
 
         assertEquals(100L, result);
 
+        verify(trainerDao).findById(1L);
+        verify(traineeDao).findById(2L);
         verify(trainingDao).create(training);
     }
 
@@ -69,7 +73,7 @@ class TrainingServiceTest {
         Training training = new Training();
         training.setTrainerId(1L);
 
-        when(trainerService.findById(1L))
+        when(trainerDao.findById(1L))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -95,7 +99,7 @@ class TrainingServiceTest {
         training.setTrainerId(1L);
         training.setTrainingType(trainingType);
 
-        when(trainerService.findById(1L))
+        when(trainerDao.findById(1L))
                 .thenReturn(Optional.of(trainer));
 
         assertThrows(
@@ -118,10 +122,10 @@ class TrainingServiceTest {
         training.setTraineeId(2L);
         training.setTrainingType(type);
 
-        when(trainerService.findById(1L))
+        when(trainerDao.findById(1L))
                 .thenReturn(Optional.of(trainer));
 
-        when(traineeService.findById(2L))
+        when(traineeDao.findById(2L))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -166,6 +170,7 @@ class TrainingServiceTest {
         List<Training> result = trainingService.findAll();
 
         assertEquals(2, result.size());
+        assertEquals(trainings, result);
     }
 
     @Test
