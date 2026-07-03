@@ -1,104 +1,151 @@
 package com.practice.service;
 
-import com.practice.dao.TraineeDao;
-import com.practice.dao.TrainerDao;
+
+import com.practice.dao.TraineeRepository;
+import com.practice.dao.TrainerRepository;
 import com.practice.entity.Trainee;
+import com.practice.entity.Trainer;
 import com.practice.entity.User;
+import com.practice.exception.AuthenticationException;
 import com.practice.utility.ServiceUtility;
-import lombok.extern.slf4j.Slf4j;
+import com.practice.utility.Validator;
+import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
-@Slf4j
+@Transactional(readOnly = true)
 public class TraineeService {
 
-    private TraineeDao traineeDao;
-    private TrainerDao trainerDao;
+    private static final Logger log = LoggerFactory.getLogger(TraineeService.class);
+    private TraineeRepository traineeRepository;
+    private TrainerRepository trainerRepository;
 
     @Autowired
-    public void setTraineeDao(TraineeDao traineeDao) {
-        this.traineeDao = traineeDao;
-        log.debug("TraineeService - TraineeDao injected");
+    public void setTraineeRepository(TraineeRepository traineeRepository) {
+        this.traineeRepository = traineeRepository;
     }
 
     @Autowired
-    public void setTrainerDao(TrainerDao trainerDao) {
-        this.trainerDao = trainerDao;
-        log.debug("TraineeService - TrainerDao injected");
+    public void setTrainerRepository(TrainerRepository trainerRepository) {
+        this.trainerRepository = trainerRepository;
     }
 
-    public Long create(Trainee traineeCreate) {
-        log.debug("TraineeService - Creating trainee: {} {}",
-                traineeCreate.getFirstName(),
-                traineeCreate.getLastName());
+    @Transactional
+    public long create(Trainee traineeCreate) {
+        Validator.validateTraineeForCreate(traineeCreate);
 
         List<User> allUsers = new ArrayList<>();
-        allUsers.addAll(traineeDao.findAll());
-        allUsers.addAll(trainerDao.findAll());
+        allUsers.addAll(traineeRepository.findAll().stream().map(Trainee::getUser).toList());
+        allUsers.addAll(trainerRepository.findAll().stream().map(Trainer::getUser).toList());
 
         String userName = ServiceUtility.generateUserName(
-                traineeCreate.getFirstName(),
-                traineeCreate.getLastName(),
+                traineeCreate.getUser().getFirstName(),
+                traineeCreate.getUser().getLastName(),
                 allUsers);
         String password = ServiceUtility.generatePassword();
 
-        traineeCreate.setUserName(userName);
-        traineeCreate.setPassword(password);
+        traineeCreate.getUser().setUserName(userName);
+        traineeCreate.getUser().setPassword(password);
+        traineeCreate.getUser().setIsActive(true);
 
-        Long id = traineeDao.create(traineeCreate).getId();
-
-        log.info("TraineeService - Trainee created successfully with username {}", userName);
-
+        Long id = traineeRepository.save(traineeCreate).getId();
+        log.info("Created trainee profile id={} username={}", id, userName);
         return id;
     }
 
-    public boolean update(Trainee traineeUpdate){
-        log.debug("TraineeService - Updating trainee with id {}", traineeUpdate.getId());
+    @Transactional
+    public boolean update(String authUsername, String authPassword, Trainee traineeUpdate) {
+        authenticate(authUsername, authPassword);
+        Validator.validateTraineeForCreate(traineeUpdate);
 
-        var maybeEntity = traineeDao.findById(traineeUpdate.getId());
+        var maybeEntity = traineeRepository.findById(traineeUpdate.getId());
         maybeEntity.ifPresentOrElse(
-                t -> traineeDao.update(traineeUpdate),
-                () -> log.warn("TraineeService - Failed to update, Trainee with id {} not found", traineeUpdate.getId())
+                t -> traineeRepository.update(traineeUpdate),
+                () -> {throw new EntityNotFoundException("Trainee with id " + traineeUpdate.getId() + " not found");}
         );
+        log.info("Updated trainee id={}", traineeUpdate.getId());
         return maybeEntity.isPresent();
     }
 
-    public boolean delete(Long id){
-        log.debug("TraineeService - Deleting trainee with id {}", id);
-
-        var maybeEntity = traineeDao.findById(id);
-        maybeEntity.ifPresentOrElse(
-                t -> traineeDao.delete(id),
-                () -> log.warn("TraineeService - Failed to delete, Trainee with id {} not found", id)
-        );
-        return maybeEntity.isPresent();
+    @Transactional
+    public boolean delete(String authUsername, String authPassword) {
+        authenticate(authUsername, authPassword);
+        boolean deleted = traineeRepository.delete(authUsername);
+        log.info("Deleted trainee username={} result={}", authUsername, deleted);
+        return deleted;
     }
 
-    public Optional<Trainee> findById(Long id){
-        log.debug("TraineeService - Searching trainee with id {}", id);
-
-        Optional<Trainee> trainee = traineeDao.findById(id);
-        trainee.ifPresentOrElse(
-                t -> log.debug("TraineeService - Trainee found with id {}", id),
-                () -> log.warn("TraineeService - Trainee with id {} not found", id)
-        );
-
-        return trainee;
+    public Optional<Trainee> findById(Long id) {
+        return traineeRepository.findById(id);
     }
 
-    public List<Trainee> findAll(){
-        log.debug("TraineeService - Retrieving all trainees");
+    public Optional<Trainee> findByUsername(String authUsername, String authPassword) {
+        authenticate(authUsername, authPassword);
+        return traineeRepository.findByUsername(authUsername);
+    }
 
-        List<Trainee> list = traineeDao.findAll();
-        if (list.isEmpty()){
-            log.debug("TraineeService - No trainees found");
+    public List<Trainee> findAll() {
+        return traineeRepository.findAll();
+    }
+
+    @Transactional
+    public void switchActive(String authUsername, String authPassword) {
+        authenticate(authUsername, authPassword);
+        Trainee trainee = traineeRepository.findByUsername(authUsername)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee " + authUsername + " not found"));
+        traineeRepository.switchActive(trainee.getId());
+        log.info("Toggled isActive for trainee username={}", authUsername);
+    }
+
+    @Transactional
+    public void changePassword(String username, String oldPassword, String newPassword) {
+        authenticate(username, oldPassword);
+        Validator.requireNotBlank(newPassword, "newPassword");
+        Trainee trainee = traineeRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee " + username + " not found"));
+        trainee.getUser().setPassword(newPassword);
+        traineeRepository.update(trainee);
+        log.info("Password changed for trainee username={}", username);
+    }
+
+    @Transactional
+    public void updateTrainersList(String authUsername, String authPassword, List<Long> trainerIds) {
+        authenticate(authUsername, authPassword);
+        Trainee trainee = traineeRepository.findByUsername(authUsername)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee " + authUsername + " not found"));
+
+        List<Trainer> newTrainers = trainerIds.stream()
+                .map(id -> trainerRepository.findById(id)
+                        .orElseThrow(() -> new EntityNotFoundException("Trainer with id " + id + " not found")))
+                .toList();
+
+        trainee.getTrainers().clear();
+        newTrainers.forEach(trainee::addTrainer);
+        traineeRepository.update(trainee);
+        log.info("Updated trainers list for trainee username={} trainerIds={}", authUsername, trainerIds);
+    }
+
+    @Transactional
+    public boolean isMatching(String username, String password) {
+        var trainee = traineeRepository.findByUsername(username);
+        return trainee.map(value -> value.getUser().getPassword().equals(password)).orElse(false);
+    }
+
+    private void authenticate(String username, String password) {
+        if (!isMatching(username, password)) {
+            log.warn("Authentication failed for trainee username={}", username);
+            throw new AuthenticationException("Invalid username or password for trainee " + username);
         }
-
-        return list;
     }
+
+
 }

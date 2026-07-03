@@ -1,161 +1,304 @@
 package com.practice.service;
 
-import com.practice.dao.TraineeDao;
-import com.practice.dao.TrainerDao;
+import com.practice.dao.TraineeRepository;
+import com.practice.dao.TrainerRepository;
 import com.practice.entity.Trainee;
+import com.practice.entity.Trainer;
+import com.practice.entity.User;
+import com.practice.exception.AuthenticationException;
 import com.practice.utility.ServiceUtility;
+import com.practice.utility.Validator;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TraineeServiceTest {
 
     @Mock
-    private TraineeDao traineeDao;
+    private TraineeRepository traineeRepository;
 
     @Mock
-    private TrainerDao trainerDao;
+    private TrainerRepository trainerRepository;
 
-    @InjectMocks
-    private TraineeService traineeService;
+    private TraineeService service;
+
+    private User user;
+    private Trainee trainee;
+
+    @BeforeEach
+    void setUp() {
+        service = new TraineeService();
+        service.setTraineeRepository(traineeRepository);
+        service.setTrainerRepository(trainerRepository);
+
+        user = User.builder()
+                .id(1L).firstName("Jane").lastName("Doe")
+                .userName("jane.doe").password("secret").isActive(true)
+                .build();
+
+        trainee = Trainee.builder().id(1L).user(user).trainers(new ArrayList<>()).build();
+    }
 
     @Test
-    void create_ShouldGenerateCredentialsAndSaveTrainee() {
-        Trainee trainee = new Trainee();
-        trainee.setFirstName("John");
-        trainee.setLastName("Doe");
+    void create_shouldGenerateCredentialsAndReturnSavedId() {
+        Trainee newTrainee = Trainee.builder()
+                .user(User.builder().firstName("Jane").lastName("Doe").build())
+                .build();
 
-        Trainee saved = new Trainee();
-        saved.setId(1L);
+        when(traineeRepository.findAll()).thenReturn(List.of(trainee));
+        when(trainerRepository.findAll()).thenReturn(List.of());
+        when(traineeRepository.save(any(Trainee.class))).thenAnswer(invocation -> {
+            Trainee saved = invocation.getArgument(0);
+            saved.setId(2L);
+            return saved;
+        });
 
-        try (MockedStatic<ServiceUtility> utility =
-                     Mockito.mockStatic(ServiceUtility.class)) {
+        try (MockedStatic<Validator> validatorMock = mockStatic(Validator.class);
+             MockedStatic<ServiceUtility> utilityMock = mockStatic(ServiceUtility.class)) {
 
-            utility.when(() ->
-                            ServiceUtility.generateUserName(anyString(), anyString(), anyList()))
-                    .thenReturn("John.Doe");
+            utilityMock.when(() -> ServiceUtility.generateUserName(eq("Jane"), eq("Doe"), anyList()))
+                    .thenReturn("jane.doe1");
+            utilityMock.when(ServiceUtility::generatePassword).thenReturn("generatedPass");
 
-            utility.when(ServiceUtility::generatePassword)
-                    .thenReturn("password");
+            long id = service.create(newTrainee);
 
-            when(traineeDao.findAll()).thenReturn(List.of());
-            when(trainerDao.findAll()).thenReturn(List.of());
-            when(traineeDao.create(any(Trainee.class))).thenReturn(saved);
-
-            Long result = traineeService.create(trainee);
-
-            assertEquals(1L, result);
-            assertEquals("John.Doe", trainee.getUserName());
-            assertEquals("password", trainee.getPassword());
-
-            verify(traineeDao).create(trainee);
-            verify(trainerDao).findAll();
+            assertThat(id).isEqualTo(2L);
+            assertThat(newTrainee.getUser().getUserName()).isEqualTo("jane.doe1");
+            assertThat(newTrainee.getUser().getPassword()).isEqualTo("generatedPass");
+            assertThat(newTrainee.getUser().getIsActive()).isTrue();
+            validatorMock.verify(() -> Validator.validateTraineeForCreate(newTrainee));
+            verify(traineeRepository).save(newTrainee);
         }
     }
 
     @Test
-    void update_WhenTraineeExists_ShouldReturnTrue() {
-        Trainee trainee = new Trainee();
-        trainee.setId(1L);
+    void update_shouldReturnTrue_whenAuthenticatedAndTraineeExists() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(trainee));
 
-        when(traineeDao.findById(1L))
-                .thenReturn(Optional.of(new Trainee()));
+        try (MockedStatic<Validator> validatorMock = mockStatic(Validator.class)) {
+            boolean result = service.update("jane.doe", "secret", trainee);
 
-        boolean result = traineeService.update(trainee);
-
-        assertTrue(result);
-        verify(traineeDao).update(trainee);
+            assertThat(result).isTrue();
+            verify(traineeRepository).update(trainee);
+        }
     }
 
     @Test
-    void update_WhenTraineeDoesNotExist_ShouldReturnFalse() {
-        Trainee trainee = new Trainee();
-        trainee.setId(1L);
+    void update_shouldThrowAuthenticationException_whenPasswordDoesNotMatch() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
 
-        when(traineeDao.findById(1L))
-                .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.update("jane.doe", "wrongPass", trainee))
+                .isInstanceOf(AuthenticationException.class);
 
-        boolean result = traineeService.update(trainee);
-
-        assertFalse(result);
-        verify(traineeDao, never()).update(any());
+        verify(traineeRepository, never()).update(any());
     }
 
     @Test
-    void delete_WhenTraineeExists_ShouldReturnTrue() {
-        when(traineeDao.findById(1L))
-                .thenReturn(Optional.of(new Trainee()));
+    void update_shouldThrowEntityNotFoundException_whenTraineeNotFound() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+        when(traineeRepository.findById(1L)).thenReturn(Optional.empty());
 
-        boolean result = traineeService.delete(1L);
+        try (MockedStatic<Validator> validatorMock = mockStatic(Validator.class)) {
+            assertThatThrownBy(() -> service.update("jane.doe", "secret", trainee))
+                    .isInstanceOf(EntityNotFoundException.class);
 
-        assertTrue(result);
-        verify(traineeDao).delete(1L);
+            verify(traineeRepository, never()).update(any());
+        }
     }
 
     @Test
-    void delete_WhenTraineeDoesNotExist_ShouldReturnFalse() {
-        when(traineeDao.findById(1L))
-                .thenReturn(Optional.empty());
+    void delete_shouldReturnTrue_whenAuthenticatedAndDeleted() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+        when(traineeRepository.delete("jane.doe")).thenReturn(true);
 
-        boolean result = traineeService.delete(1L);
+        boolean result = service.delete("jane.doe", "secret");
 
-        assertFalse(result);
-        verify(traineeDao, never()).delete(anyLong());
+        assertThat(result).isTrue();
     }
 
     @Test
-    void findById_WhenTraineeExists_ShouldReturnTrainee() {
-        Trainee trainee = new Trainee();
+    void delete_shouldReturnFalse_whenAuthenticatedButNothingDeleted() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+        when(traineeRepository.delete("jane.doe")).thenReturn(false);
 
-        when(traineeDao.findById(1L))
-                .thenReturn(Optional.of(trainee));
+        boolean result = service.delete("jane.doe", "secret");
 
-        Optional<Trainee> result = traineeService.findById(1L);
-
-        assertTrue(result.isPresent());
-        assertEquals(trainee, result.get());
+        assertThat(result).isFalse();
     }
 
     @Test
-    void findById_WhenTraineeDoesNotExist_ShouldReturnEmptyOptional() {
-        when(traineeDao.findById(1L))
-                .thenReturn(Optional.empty());
+    void delete_shouldThrowAuthenticationException_whenNotAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.empty());
 
-        Optional<Trainee> result = traineeService.findById(1L);
+        assertThatThrownBy(() -> service.delete("jane.doe", "secret"))
+                .isInstanceOf(AuthenticationException.class);
 
-        assertTrue(result.isEmpty());
+        verify(traineeRepository, never()).delete(anyString());
     }
 
     @Test
-    void findAll_WhenTraineesExist_ShouldReturnList() {
-        List<Trainee> trainees = List.of(new Trainee(), new Trainee());
+    void findById_shouldReturnTrainee_whenFound() {
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(trainee));
 
-        when(traineeDao.findAll()).thenReturn(trainees);
+        Optional<Trainee> result = service.findById(1L);
 
-        List<Trainee> result = traineeService.findAll();
-
-        assertEquals(2, result.size());
-        assertEquals(trainees, result);
+        assertThat(result).isPresent().contains(trainee);
     }
 
     @Test
-    void findAll_WhenNoTraineesExist_ShouldReturnEmptyList() {
-        when(traineeDao.findAll()).thenReturn(List.of());
+    void findById_shouldReturnEmpty_whenNotFound() {
+        when(traineeRepository.findById(1L)).thenReturn(Optional.empty());
 
-        List<Trainee> result = traineeService.findAll();
+        Optional<Trainee> result = service.findById(1L);
 
-        assertTrue(result.isEmpty());
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void findByUsername_shouldReturnTrainee_whenAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+
+        Optional<Trainee> result = service.findByUsername("jane.doe", "secret");
+
+        assertThat(result).isPresent().contains(trainee);
+    }
+
+    @Test
+    void findByUsername_shouldThrowAuthenticationException_whenNotAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findByUsername("jane.doe", "secret"))
+                .isInstanceOf(AuthenticationException.class);
+    }
+
+    @Test
+    void findAll_shouldReturnAllTrainees() {
+        when(traineeRepository.findAll()).thenReturn(List.of(trainee));
+
+        List<Trainee> result = service.findAll();
+
+        assertThat(result).containsExactly(trainee);
+    }
+
+    @Test
+    void switchActive_shouldToggleActive_whenAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+
+        service.switchActive("jane.doe", "secret");
+
+        verify(traineeRepository).switchActive(1L);
+    }
+
+    @Test
+    void switchActive_shouldThrowAuthenticationException_whenNotAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.switchActive("jane.doe", "secret"))
+                .isInstanceOf(AuthenticationException.class);
+
+        verify(traineeRepository, never()).switchActive(any());
+    }
+
+    @Test
+    void changePassword_shouldUpdatePassword_whenAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+
+        try (MockedStatic<Validator> validatorMock = mockStatic(Validator.class)) {
+            service.changePassword("jane.doe", "secret", "newSecret");
+
+            assertThat(trainee.getUser().getPassword()).isEqualTo("newSecret");
+            verify(traineeRepository).update(trainee);
+        }
+    }
+
+    @Test
+    void changePassword_shouldThrowAuthenticationException_whenOldPasswordWrong() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+
+        assertThatThrownBy(() -> service.changePassword("jane.doe", "wrongPass", "newSecret"))
+                .isInstanceOf(AuthenticationException.class);
+
+        verify(traineeRepository, never()).update(any());
+    }
+
+    @Test
+    void updateTrainersList_shouldReplaceTrainers_whenAuthenticatedAndAllTrainersExist() {
+        Trainer trainer1 = Trainer.builder().id(10L).trainees(new ArrayList<>()).build();
+        Trainer trainer2 = Trainer.builder().id(20L).trainees(new ArrayList<>()).build();
+
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+        when(trainerRepository.findById(10L)).thenReturn(Optional.of(trainer1));
+        when(trainerRepository.findById(20L)).thenReturn(Optional.of(trainer2));
+
+        service.updateTrainersList("jane.doe", "secret", List.of(10L, 20L));
+
+        assertThat(trainee.getTrainers()).containsExactly(trainer1, trainer2);
+        verify(traineeRepository).update(trainee);
+    }
+
+    @Test
+    void updateTrainersList_shouldThrowEntityNotFoundException_whenTrainerIdMissing() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+        when(trainerRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateTrainersList("jane.doe", "secret", List.of(99L)))
+                .isInstanceOf(EntityNotFoundException.class);
+
+        verify(traineeRepository, never()).update(any());
+    }
+
+    @Test
+    void updateTrainersList_shouldThrowAuthenticationException_whenNotAuthenticated() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateTrainersList("jane.doe", "secret", List.of(10L)))
+                .isInstanceOf(AuthenticationException.class);
+
+        verify(trainerRepository, never()).findById(any());
+    }
+
+    @Test
+    void isMatching_shouldReturnTrue_whenPasswordMatches() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+
+        boolean result = service.isMatching("jane.doe", "secret");
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void isMatching_shouldReturnFalse_whenPasswordDoesNotMatch() {
+        when(traineeRepository.findByUsername("jane.doe")).thenReturn(Optional.of(trainee));
+
+        boolean result = service.isMatching("jane.doe", "wrongPass");
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void isMatching_shouldReturnFalse_whenUserNotFound() {
+        when(traineeRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+        boolean result = service.isMatching("unknown", "secret");
+
+        assertThat(result).isFalse();
     }
 }

@@ -1,171 +1,129 @@
 package com.practice;
 
-
 import com.practice.config.AppConfig;
+import com.practice.config.DataInitializer;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
-import com.practice.entity.Training;
 import com.practice.entity.TrainingType;
 import com.practice.facade.GymFacade;
+import com.practice.runner.DemoRunner;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import java.time.Duration;
-import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 public class Main {
+
     public static void main(String[] args) {
-        try (AnnotationConfigApplicationContext context =
-                     new AnnotationConfigApplicationContext(AppConfig.class)) {
+        try (var context = new AnnotationConfigApplicationContext(AppConfig.class)) {
+            context.getBean(DataInitializer.class).init();
+            GymFacade facade = context.getBean(GymFacade.class);
+            DemoRunner runner = new DemoRunner(facade);
 
-            GymFacade gymFacade = context.getBean(GymFacade.class);
+            TrainingType trainingType = runner.pickTrainingType();
+            section("0. Using training type: " + trainingType.getName());
 
-            // =========================
-            // CREATE TRAINEES
-            // =========================
+            section("1-2. Create Trainee / Trainer profiles");
+            DemoRunner.CreatedTrainee createdTrainee = runner.createTrainee();
+            Trainee trainee = createdTrainee.trainee();
+            String traineeUsername = trainee.getUser().getUserName();
+            String traineePassword = trainee.getUser().getPassword();
+            System.out.printf("Created trainee id=%d username=%s password=%s%n",
+                    createdTrainee.id(), traineeUsername, traineePassword);
 
-            Trainee trainee1 = new Trainee();
-            trainee1.setFirstName("John");
-            trainee1.setLastName("Smith");
-            trainee1.setDateOfBirth(LocalDate.of(2001,1,1));
-            trainee1.setAddress("Avenue 1");
+            DemoRunner.CreatedTrainer createdTrainer = runner.createTrainer(trainingType);
+            Trainer trainer = createdTrainer.trainer();
+            String trainerUsername = trainer.getUser().getUserName();
+            String trainerPassword = trainer.getUser().getPassword();
+            System.out.printf("Created trainer id=%d username=%s password=%s%n",
+                    createdTrainer.id(), trainerUsername, trainerPassword);
 
-            Trainee trainee2 = new Trainee();
-            trainee2.setFirstName("Mike");
-            trainee2.setLastName("Johnson");
-            trainee2.setDateOfBirth(LocalDate.of(2002,2,2));
-            trainee2.setAddress("Avenue 2");
+            section("3-4. Credentials matching");
+            System.out.println("Trainee credentials OK: " + runner.isTraineeMatching(traineeUsername, traineePassword));
+            System.out.println("Trainer credentials OK: " + runner.isTrainerMatching(trainerUsername, trainerPassword));
+            System.out.println("Trainee with WRONG password: " + runner.isTraineeMatching(traineeUsername, "wrong-password"));
 
-            Long traineeId1 = gymFacade.createTrainee(trainee1);
-            Long traineeId2 = gymFacade.createTrainee(trainee2);
+            section("5-6. Select profiles by username");
+            Optional<Trainee> foundTrainee = runner.findTraineeByUsername(traineeUsername, traineePassword);
+            System.out.println("Found trainee: " + foundTrainee.map(t -> t.getUser().getFirstName()).orElse("N/A"));
 
-            System.out.println("Created trainees:");
-            System.out.println(traineeId1);
-            System.out.println(traineeId2);
+            Optional<Trainer> foundTrainer = runner.findTrainerByUsername(trainerUsername, trainerPassword);
+            System.out.println("Found trainer: " + foundTrainer.map(t -> t.getUser().getFirstName()).orElse("N/A"));
 
-            // =========================
-            // CREATE TRAINERS
-            // =========================
+            section("7-8. Password change");
+            String traineeNewPassword = "NewTraineePass1";
+            runner.changeTraineePassword(traineeUsername, traineePassword, traineeNewPassword);
+            System.out.println("Trainee password changed, old password now rejected: "
+                    + !runner.isTraineeMatching(traineeUsername, traineePassword));
+            System.out.println("Trainee new password accepted: "
+                    + runner.isTraineeMatching(traineeUsername, traineeNewPassword));
+            traineePassword = traineeNewPassword;
 
-            Trainer trainer1 = new Trainer();
-            trainer1.setFirstName("Alex");
-            trainer1.setLastName("Brown");
-            trainer1.setSpecialization(TrainingType.builder().trainingTypeName("SWIM").build());
+            String trainerNewPassword = "NewTrainerPass1";
+            runner.changeTrainerPassword(trainerUsername, trainerPassword, trainerNewPassword);
+            System.out.println("Trainer new password accepted: "
+                    + runner.isTrainerMatching(trainerUsername, trainerNewPassword));
+            trainerPassword = trainerNewPassword;
 
-            Trainer trainer2 = new Trainer();
-            trainer2.setFirstName("David");
-            trainer2.setLastName("Wilson");
-            trainer2.setSpecialization(TrainingType.builder().trainingTypeName("CARDIO").build());
+            section("9-10. Update profiles");
+            runner.renameTraineeFirstName(trainee, "Jonathan", traineeUsername, traineePassword);
+            System.out.println("Trainee first name updated to: "
+                    + runner.findTraineeByUsername(traineeUsername, traineePassword)
+                    .map(t -> t.getUser().getFirstName()).orElse("N/A"));
 
-            Long trainerId1 = gymFacade.createTrainer(trainer1);
-            Long trainerId2 = gymFacade.createTrainer(trainer2);
+            runner.renameTrainerFirstName(trainer, "Annabelle", trainerUsername, trainerPassword);
+            System.out.println("Trainer first name updated to: "
+                    + runner.findTrainerByUsername(trainerUsername, trainerPassword)
+                    .map(t -> t.getUser().getFirstName()).orElse("N/A"));
 
-            System.out.println("\nCreated trainers:");
-            System.out.println(trainerId1);
-            System.out.println(trainerId2);
+            section("11-12. Activate/Deactivate (toggle, not idempotent)");
+            runner.toggleTraineeActive(traineeUsername, traineePassword);
+            System.out.println("Trainee isActive after 1st toggle: "
+                    + runner.findTraineeByUsername(traineeUsername, traineePassword)
+                    .map(t -> t.getUser().getIsActive()).orElse(null));
+            runner.toggleTraineeActive(traineeUsername, traineePassword);
+            System.out.println("Trainee isActive after 2nd toggle: "
+                    + runner.findTraineeByUsername(traineeUsername, traineePassword)
+                    .map(t -> t.getUser().getIsActive()).orElse(null));
 
-            // =========================
-            // CREATE TRAININGS
-            // =========================
+            runner.toggleTrainerActive(trainerUsername, trainerPassword);
+            System.out.println("Trainer isActive after toggle: "
+                    + runner.findTrainerByUsername(trainerUsername, trainerPassword)
+                    .map(t -> t.getUser().getIsActive()).orElse(null));
 
-            Training training1 = Training.builder()
-                    .traineeId(1L)
-                    .trainerId(4L)
-                    .trainingName("CARDIO day")
-                    .trainingType(TrainingType.builder().trainingTypeName("CARDIO").build())
-                    .trainingDate(LocalDate.of(2026, 6, 25))
-                    .trainingDuration(Duration.ofHours(1))
-                    .build();
+            section("17-18. Not-assigned trainers / update trainee's trainers list");
+            List<Trainer> notAssigned = runner.findAllTrainersNotAssignedToTrainee(traineeUsername, traineePassword);
+            System.out.println("Trainers not yet assigned to trainee: " + notAssigned.size());
 
-            Training training2 = Training.builder()
-                    .traineeId(2L)
-                    .trainerId(3L)
-                    .trainingName("SWIM")
-                    .trainingType(TrainingType.builder().trainingTypeName("SWIM").build())
-                    .trainingDate(LocalDate.of(2026, 6, 25))
-                    .trainingDuration(Duration.ofHours(1))
-                    .build();
+            runner.assignTrainerToTrainee(traineeUsername, traineePassword, createdTrainer.id());
+            System.out.println("Assigned trainers after update: "
+                    + runner.findTraineeByUsername(traineeUsername, traineePassword)
+                    .map(t -> t.getTrainers().size()).orElse(-1));
 
-            Long trainingId1 = gymFacade.createTraining(training1);
-            Long trainingId2 = gymFacade.createTraining(training2);
+            section("16. Add training");
+            Long trainingId = runner.createTraining(trainee, trainer, trainingType, traineeUsername, traineePassword);
+            System.out.println("Created training id=" + trainingId);
 
-            System.out.println("\nCreated trainings:");
-            System.out.println(trainingId1);
-            System.out.println(trainingId2);
+            section("14-15. Trainings by criteria");
+            System.out.println("Trainee trainings found: " + runner.findTraineeTrainings(traineeUsername, traineePassword).size());
+            System.out.println("Trainer trainings found: " + runner.findTrainerTrainings(trainerUsername, trainerPassword).size());
 
-            // =========================
-            // FIND BY ID
-            // =========================
+            section("13. Delete trainee profile by username");
+            boolean deleted = runner.deleteTrainee(traineeUsername, traineePassword);
+            System.out.println("Trainee deleted: " + deleted);
+            System.out.println("Trainee lookup after delete throws AuthenticationException (expected): ");
+            try {
+                runner.findTraineeByUsername(traineeUsername, traineePassword);
+            } catch (Exception e) {
+                System.out.println("  -> " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
 
-            System.out.println("\nFind trainee by id:");
-            gymFacade.findByIdTrainee(traineeId1)
-                    .ifPresent(System.out::println);
-
-            System.out.println("\nFind trainer by id:");
-            gymFacade.findByIdTrainer(trainerId1)
-                    .ifPresent(System.out::println);
-
-            System.out.println("\nFind training by id:");
-            gymFacade.findByIdTraining(trainingId1)
-                    .ifPresent(System.out::println);
-
-            // =========================
-            // UPDATE TRAINEE
-            // =========================
-
-            trainee1.setId(traineeId1);
-            trainee1.setFirstName("UpdatedJohn");
-            trainee1.setLastName("UpdatedSmith");
-
-            boolean traineeUpdated =
-                    gymFacade.updateTrainee(trainee1);
-
-            System.out.println("\nTrainee updated = " + traineeUpdated);
-
-            // =========================
-            // UPDATE TRAINER
-            // =========================
-
-            trainer1.setId(trainerId1);
-            trainer1.setFirstName("UpdatedAlex");
-            trainer1.setLastName("UpdatedBrown");
-
-            boolean trainerUpdated =
-                    gymFacade.updateTrainer(trainer1);
-
-            System.out.println("Trainer updated = " + trainerUpdated);
-
-            // =========================
-            // SHOW ALL
-            // =========================
-
-            System.out.println("\n=== ALL TRAINEES ===");
-            gymFacade.findAllTrainee()
-                    .forEach(System.out::println);
-
-            System.out.println("\n=== ALL TRAINERS ===");
-            gymFacade.findAllTrainer()
-                    .forEach(System.out::println);
-
-            System.out.println("\n=== ALL TRAININGS ===");
-            gymFacade.findAllTraining()
-                    .forEach(System.out::println);
-
-            // =========================
-            // DELETE TRAINEE
-            // =========================
-
-            boolean deleted =
-                    gymFacade.deleteTrainee(traineeId2);
-
-            System.out.println("\nDeleted trainee = " + deleted);
-
-            // =========================
-            // SHOW ALL AGAIN
-            // =========================
-
-            System.out.println("\n=== TRAINEES AFTER DELETE ===");
-            gymFacade.findAllTrainee()
-                    .forEach(System.out::println);
+            section("Demo finished");
         }
+    }
+
+    private static void section(String title) {
+        System.out.println();
+        System.out.println("===== " + title + " =====");
     }
 }

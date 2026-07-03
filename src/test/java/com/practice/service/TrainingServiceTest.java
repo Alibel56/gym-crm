@@ -1,18 +1,28 @@
 package com.practice.service;
 
-import com.practice.dao.TraineeDao;
-import com.practice.dao.TrainerDao;
-import com.practice.dao.TrainingDao;
+import com.practice.dao.TraineeRepository;
+import com.practice.dao.TrainerRepository;
+import com.practice.dao.TrainingRepository;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.Training;
 import com.practice.entity.TrainingType;
+import com.practice.entity.User;
+import com.practice.exception.AuthenticationException;
+import com.practice.exception.ValidationException;
+import com.practice.utility.Criteria;
+import com.practice.utility.Validator;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,149 +33,251 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TrainingServiceTest {
 
-    @Mock
-    private TrainingDao trainingDao;
+    private static final String TRAINEE_USERNAME = "john.doe";
+    private static final String TRAINEE_PASSWORD = "traineePass123";
+    private static final String TRAINER_USERNAME = "jane.smith";
+    private static final String TRAINER_PASSWORD = "trainerPass123";
 
     @Mock
-    private TrainerDao trainerDao;
+    private TrainingRepository trainingRepository;
 
     @Mock
-    private TraineeDao traineeDao;
+    private TrainerRepository trainerRepository;
+
+    @Mock
+    private TraineeRepository traineeRepository;
 
     @InjectMocks
     private TrainingService trainingService;
 
-    @Test
-    void create_WhenDataIsValid_ShouldCreateTraining() {
-        TrainingType type = new TrainingType();
+    private MockedStatic<Validator> validatorMock;
 
-        Trainer trainer = new Trainer();
-        trainer.setSpecialization(type);
+    @BeforeEach
+    void setUp() {
+        validatorMock = mockStatic(Validator.class);
+    }
 
-        Training training = new Training();
-        training.setTrainerId(1L);
-        training.setTraineeId(2L);
-        training.setTrainingType(type);
+    @AfterEach
+    void tearDown() {
+        validatorMock.close();
+    }
 
-        Training saved = new Training();
-        saved.setId(100L);
+    private User buildUser(Long id, String userName, String password) {
+        return User.builder()
+                .id(id)
+                .firstName("First")
+                .lastName("Last")
+                .userName(userName)
+                .password(password)
+                .isActive(true)
+                .build();
+    }
 
-        when(trainerDao.findById(1L))
-                .thenReturn(Optional.of(trainer));
+    private TrainingType buildTrainingType(Long id, String name) {
+        return TrainingType.builder().id(id).name(name).build();
+    }
 
-        when(traineeDao.findById(2L))
-                .thenReturn(Optional.of(new Trainee()));
+    private Trainee buildTrainee(Long id, User user) {
+        return Trainee.builder()
+                .id(id)
+                .dateOfBirth(LocalDate.of(1995, 1, 1))
+                .address("Some address")
+                .user(user)
+                .build();
+    }
 
-        when(trainingDao.create(any(Training.class)))
-                .thenReturn(saved);
+    private Trainer buildTrainer(Long id, User user, TrainingType trainingType) {
+        return Trainer.builder()
+                .id(id)
+                .user(user)
+                .trainingType(trainingType)
+                .build();
+    }
 
-        Long result = trainingService.create(training);
-
-        assertEquals(100L, result);
-
-        verify(trainerDao).findById(1L);
-        verify(traineeDao).findById(2L);
-        verify(trainingDao).create(training);
+    private Training buildTraining(Long id, Trainee trainee, Trainer trainer, TrainingType trainingType) {
+        return Training.builder()
+                .id(id)
+                .trainee(trainee)
+                .trainer(trainer)
+                .trainingName("Morning session")
+                .trainingType(trainingType)
+                .trainingDate(LocalDate.now().plusDays(1))
+                .trainingDuration(60)
+                .build();
     }
 
     @Test
-    void create_WhenTrainerNotFound_ShouldThrowException() {
-        Training training = new Training();
-        training.setTrainerId(1L);
+    void create_successfulCreation_returnsGeneratedId() {
+        TrainingType trainingType = buildTrainingType(10L, "CARDIO");
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        User trainerUser = buildUser(2L, TRAINER_USERNAME, TRAINER_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        Trainer trainer = buildTrainer(200L, trainerUser, trainingType);
+        Training trainingToCreate = buildTraining(null, trainee, trainer, trainingType);
 
-        when(trainerDao.findById(1L))
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+        when(trainerRepository.findById(trainer.getId())).thenReturn(Optional.of(trainer));
+
+        Training saved = buildTraining(500L, trainee, trainer, trainingType);
+        when(trainingRepository.save(trainingToCreate)).thenReturn(saved);
+
+        Long resultId = trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, trainingToCreate);
+
+        assertEquals(500L, resultId);
+        validatorMock.verify(() -> Validator.validateTrainingForCreate(trainingToCreate));
+        verify(trainingRepository).save(trainingToCreate);
+    }
+
+    @Test
+    void create_wrongTraineePassword_throwsAuthenticationException() {
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+
+        Training training = buildTraining(null, trainee, null, null);
+
+        AuthenticationException ex = assertThrows(AuthenticationException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, "wrongPassword", training));
+
+        assertTrue(ex.getMessage().contains(TRAINEE_USERNAME));
+        verifyNoInteractions(trainingRepository);
+        verifyNoInteractions(trainerRepository);
+        validatorMock.verifyNoInteractions();
+    }
+
+    @Test
+    void create_traineeNotFoundDuringAuth_throwsAuthenticationException() {
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.empty());
+        Training training = buildTraining(null, null, null, null);
+
+        assertThrows(AuthenticationException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, training));
+
+        verifyNoInteractions(trainingRepository);
+        verifyNoInteractions(trainerRepository);
+    }
+
+    @Test
+    void create_validatorRejectsTraining_throwsValidationException() {
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+
+        Training training = buildTraining(null, trainee, null, null);
+        validatorMock.when(() -> Validator.validateTrainingForCreate(training))
+                .thenThrow(new ValidationException("Invalid training data"));
+
+        assertThrows(ValidationException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, training));
+
+        verifyNoInteractions(trainerRepository);
+        verifyNoInteractions(trainingRepository);
+    }
+
+    @Test
+    void create_trainerNotFound_throwsEntityNotFoundException() {
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        Trainer trainer = buildTrainer(200L, null, null);
+        Training training = buildTraining(null, trainee, trainer, null);
+
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+        when(trainerRepository.findById(trainer.getId())).thenReturn(Optional.empty());
+
+        EntityNotFoundException ex = assertThrows(EntityNotFoundException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, training));
+
+        assertEquals("Trainer's id in new training not found", ex.getMessage());
+        verify(trainingRepository, never()).save(any());
+    }
+
+    @Test
+    void create_trainerSpecializationMismatch_throwsValidationException() {
+        TrainingType trainerType = buildTrainingType(10L, "YOGA");
+        TrainingType trainingRequestedType = buildTrainingType(20L, "CARDIO");
+
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        Trainer trainer = buildTrainer(200L, null, trainerType);
+        Training training = buildTraining(null, trainee, trainer, trainingRequestedType);
+
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+        when(trainerRepository.findById(trainer.getId())).thenReturn(Optional.of(trainer));
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, training));
+
+        assertEquals("Trainer's specialization does not match", ex.getMessage());
+        verify(trainingRepository, never()).save(any());
+    }
+
+    @Test
+    void create_traineeNotFoundAfterTrainerCheck_throwsEntityNotFoundException() {
+        TrainingType trainingType = buildTrainingType(10L, "CARDIO");
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        Trainer trainer = buildTrainer(200L, null, trainingType);
+        Training training = buildTraining(null, trainee, trainer, trainingType);
+
+        // First lookup (auth) succeeds, second (post trainer-check) returns empty
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME))
+                .thenReturn(Optional.of(trainee))
                 .thenReturn(Optional.empty());
+        when(trainerRepository.findById(trainer.getId())).thenReturn(Optional.of(trainer));
 
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> trainingService.create(training)
-        );
+        EntityNotFoundException ex = assertThrows(EntityNotFoundException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, training));
 
-        verify(trainingDao, never()).create(any());
+        assertEquals("Trainee's id in new training not found", ex.getMessage());
+        verify(trainingRepository, never()).save(any());
     }
 
     @Test
-    void create_WhenTrainerSpecializationDoesNotMatch_ShouldThrowException() {
-        TrainingType trainerType = new TrainingType();
-        trainerType.setTrainingTypeName("Yoga");
+    void create_trainingTraineeDoesNotMatchAuthenticatedTrainee_throwsValidationException() {
+        TrainingType trainingType = buildTrainingType(10L, "CARDIO");
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee authenticatedTrainee = buildTrainee(100L, traineeUser);
+        Trainee mismatchedTrainee = buildTrainee(999L, traineeUser);
+        Trainer trainer = buildTrainer(200L, null, trainingType);
+        Training training = buildTraining(null, mismatchedTrainee, trainer, trainingType);
 
-        TrainingType trainingType = new TrainingType();
-        trainingType.setTrainingTypeName("Boxing");
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(authenticatedTrainee));
+        when(trainerRepository.findById(trainer.getId())).thenReturn(Optional.of(trainer));
 
-        Trainer trainer = new Trainer();
-        trainer.setSpecialization(trainerType);
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> trainingService.create(TRAINEE_USERNAME, TRAINEE_PASSWORD, training));
 
-        Training training = new Training();
-        training.setTrainerId(1L);
-        training.setTrainingType(trainingType);
-
-        when(trainerDao.findById(1L))
-                .thenReturn(Optional.of(trainer));
-
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> trainingService.create(training)
-        );
-
-        verify(trainingDao, never()).create(any());
+        assertEquals("Training's trainee does not match the authenticated trainee", ex.getMessage());
+        verify(trainingRepository, never()).save(any());
     }
 
     @Test
-    void create_WhenTraineeNotFound_ShouldThrowException() {
-        TrainingType type = new TrainingType();
+    void findById_existingId_returnsTraining() {
+        Training training = buildTraining(5L, null, null, null);
+        when(trainingRepository.findById(5L)).thenReturn(Optional.of(training));
 
-        Trainer trainer = new Trainer();
-        trainer.setSpecialization(type);
-
-        Training training = new Training();
-        training.setTrainerId(1L);
-        training.setTraineeId(2L);
-        training.setTrainingType(type);
-
-        when(trainerDao.findById(1L))
-                .thenReturn(Optional.of(trainer));
-
-        when(traineeDao.findById(2L))
-                .thenReturn(Optional.empty());
-
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> trainingService.create(training)
-        );
-
-        verify(trainingDao, never()).create(any());
-    }
-
-    @Test
-    void findById_WhenTrainingExists_ShouldReturnTraining() {
-        Training training = new Training();
-
-        when(trainingDao.findById(1L))
-                .thenReturn(Optional.of(training));
-
-        Optional<Training> result = trainingService.findById(1L);
+        Optional<Training> result = trainingService.findById(5L);
 
         assertTrue(result.isPresent());
         assertEquals(training, result.get());
     }
 
     @Test
-    void findById_WhenTrainingNotFound_ShouldReturnEmpty() {
-        when(trainingDao.findById(1L))
-                .thenReturn(Optional.empty());
+    void findById_nonExistingId_returnsEmptyOptional() {
+        when(trainingRepository.findById(5L)).thenReturn(Optional.empty());
 
-        Optional<Training> result = trainingService.findById(1L);
+        Optional<Training> result = trainingService.findById(5L);
 
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void findAll_WhenTrainingsExist_ShouldReturnList() {
-        List<Training> trainings =
-                List.of(new Training(), new Training());
-
-        when(trainingDao.findAll())
-                .thenReturn(trainings);
+    void findAll_returnsAllTrainings() {
+        List<Training> trainings = List.of(
+                buildTraining(1L, null, null, null),
+                buildTraining(2L, null, null, null)
+        );
+        when(trainingRepository.findAll()).thenReturn(trainings);
 
         List<Training> result = trainingService.findAll();
 
@@ -174,12 +286,95 @@ class TrainingServiceTest {
     }
 
     @Test
-    void findAll_WhenNoTrainingsExist_ShouldReturnEmptyList() {
-        when(trainingDao.findAll())
-                .thenReturn(List.of());
+    void findAll_noTrainings_returnsEmptyList() {
+        when(trainingRepository.findAll()).thenReturn(List.of());
 
         List<Training> result = trainingService.findAll();
 
         assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findAllTraineeTrainingsByCriteria_authenticatedTrainee_returnsFilteredList() {
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        Criteria criteria = mock(Criteria.class);
+        List<Training> expected = List.of(buildTraining(1L, trainee, null, null));
+
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+        when(trainingRepository.findAllTraineeTrainingsByCriteria(TRAINEE_USERNAME, criteria))
+                .thenReturn(expected);
+
+        List<Training> result = trainingService.findAllTraineeTrainingsByCriteria(
+                TRAINEE_USERNAME, TRAINEE_PASSWORD, criteria);
+
+        assertEquals(expected, result);
+    }
+
+    @Test
+    void findAllTraineeTrainingsByCriteria_wrongPassword_throwsAuthenticationException() {
+        User traineeUser = buildUser(1L, TRAINEE_USERNAME, TRAINEE_PASSWORD);
+        Trainee trainee = buildTrainee(100L, traineeUser);
+        Criteria criteria = mock(Criteria.class);
+
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.of(trainee));
+
+        assertThrows(AuthenticationException.class, () ->
+                trainingService.findAllTraineeTrainingsByCriteria(TRAINEE_USERNAME, "wrongPassword", criteria));
+
+        verifyNoInteractions(trainingRepository);
+    }
+
+    @Test
+    void findAllTraineeTrainingsByCriteria_traineeNotFound_throwsAuthenticationException() {
+        Criteria criteria = mock(Criteria.class);
+        when(traineeRepository.findByUsername(TRAINEE_USERNAME)).thenReturn(Optional.empty());
+
+        assertThrows(AuthenticationException.class, () ->
+                trainingService.findAllTraineeTrainingsByCriteria(TRAINEE_USERNAME, TRAINEE_PASSWORD, criteria));
+
+        verifyNoInteractions(trainingRepository);
+    }
+
+    @Test
+    void findAllTrainerTrainingsByCriteria_authenticatedTrainer_returnsFilteredList() {
+        User trainerUser = buildUser(2L, TRAINER_USERNAME, TRAINER_PASSWORD);
+        Trainer trainer = buildTrainer(200L, trainerUser, null);
+        Criteria criteria = mock(Criteria.class);
+        List<Training> expected = List.of(buildTraining(1L, null, trainer, null));
+
+        when(trainerRepository.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
+        when(trainingRepository.findAllTrainerTrainingsByCriteria(TRAINER_USERNAME, criteria))
+                .thenReturn(expected);
+
+        List<Training> result = trainingService.findAllTrainerTrainingsByCriteria(
+                TRAINER_USERNAME, TRAINER_PASSWORD, criteria);
+
+        assertEquals(expected, result);
+    }
+
+    @Test
+    void findAllTrainerTrainingsByCriteria_wrongPassword_throwsAuthenticationException() {
+        User trainerUser = buildUser(2L, TRAINER_USERNAME, TRAINER_PASSWORD);
+        Trainer trainer = buildTrainer(200L, trainerUser, null);
+        Criteria criteria = mock(Criteria.class);
+
+        when(trainerRepository.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.of(trainer));
+
+        assertThrows(AuthenticationException.class, () ->
+                trainingService.findAllTrainerTrainingsByCriteria(TRAINER_USERNAME, "wrongPassword", criteria));
+
+        verifyNoInteractions(trainingRepository);
+    }
+
+    @Test
+    void findAllTrainerTrainingsByCriteria_trainerNotFound_throwsAuthenticationException() {
+        Criteria criteria = mock(Criteria.class);
+        when(trainerRepository.findByUsername(TRAINER_USERNAME)).thenReturn(Optional.empty());
+
+        assertThrows(AuthenticationException.class, () ->
+                trainingService.findAllTrainerTrainingsByCriteria(TRAINER_USERNAME, TRAINER_PASSWORD, criteria));
+
+        verifyNoInteractions(trainingRepository);
     }
 }
