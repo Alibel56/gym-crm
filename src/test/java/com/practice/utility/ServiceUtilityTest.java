@@ -65,7 +65,6 @@ class ServiceUtilityTest {
 
     @Test
     void generateUserName_gapInSuffixSequence_stillReturnsFirstFreeSlot() {
-        // Doe1 is free even though Doe and Doe2 are taken - method should stop at first gap
         List<User> existing = List.of(buildUser("John.Doe"), buildUser("John.Doe2"));
 
         String result = ServiceUtility.generateUserName("John", "Doe", existing);

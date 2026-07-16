@@ -30,12 +30,6 @@ public class TraineeRepositoryImpl implements TraineeRepository {
     }
 
     @Override
-    public void update(Trainee trainee) {
-        sessionFactory.getCurrentSession().merge(trainee);
-        log.info("Merged trainee id={}", trainee.getId());
-    }
-
-    @Override
     public Optional<Trainee> findById(Long id) {
         log.debug("Finding trainee by id={}", id);
         var t = Optional.ofNullable(sessionFactory.getCurrentSession().find(Trainee.class, id));
@@ -79,19 +73,6 @@ public class TraineeRepositoryImpl implements TraineeRepository {
         sessionFactory.getCurrentSession().remove(trainee.get());
         log.debug("Deleted trainee by username={}", username);
         return true;
-    }
-
-
-    @Override
-    public void switchActive(Long id) {
-        log.debug("Switching active trainee id={}", id);
-        var trainee = findById(id);
-        if (trainee.isEmpty()) {
-            log.error("Switch active skipped, trainee not found username={}", id);
-            throw new EntityNotFoundException();
-        }
-        trainee.get().getUser().setIsActive(!trainee.get().getUser().getIsActive());
-        log.debug("Switched active trainee id={}", id);
     }
 
     @Override

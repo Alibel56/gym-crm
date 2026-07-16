@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class TrainingTypeRepositoryImpl implements TrainingTypeRepository {
@@ -19,6 +20,17 @@ public class TrainingTypeRepositoryImpl implements TrainingTypeRepository {
     @Autowired
     public void setSessionFactory(SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
+    }
+
+
+    @Override
+    public Optional<TrainingType> findById(Long id) {
+        log.info("Finding training type by id");
+        var t = sessionFactory.getCurrentSession().createQuery("from TrainingType where id = :id", TrainingType.class)
+                .setParameter("id", id)
+                .uniqueResult();
+        log.info("Found training type");
+        return Optional.ofNullable(t);
     }
 
     @Override

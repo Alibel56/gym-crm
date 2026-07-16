@@ -53,4 +53,10 @@ public class Trainee{
         this.trainers.add(t);
         t.getTrainees().add(this);
     }
+
+    public void removeTrainer(Trainer trainer) {
+        trainers.remove(trainer);
+        trainer.getTrainees().remove(this);
+    }
+
 }

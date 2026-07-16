@@ -7,7 +7,6 @@ import java.util.Optional;
 
 public interface TrainerRepository {
     Trainer save(Trainer trainer);
-    void update(Trainer trainer);
     Optional<Trainer> findById(Long id);
     List<Trainer> findAll();
     Optional<Trainer> findByUsername(String username);

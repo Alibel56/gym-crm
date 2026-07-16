@@ -32,12 +32,6 @@ public class TrainerRepositoryImpl implements TrainerRepository {
     }
 
     @Override
-    public void update(Trainer trainer) {
-        sessionFactory.getCurrentSession().merge(trainer);
-        log.info("Merged trainer id={}", trainer.getId());
-    }
-
-    @Override
     public Optional<Trainer> findById(Long id) {
         log.debug("Finding trainer by id={}", id);
         var t = Optional.ofNullable(sessionFactory.getCurrentSession().find(Trainer.class, id));

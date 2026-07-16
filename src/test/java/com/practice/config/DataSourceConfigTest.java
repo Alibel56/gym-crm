@@ -41,9 +41,6 @@ class DataSourceConfigTest {
 
     @Test
     void dataSource_validDriverClassName_doesNotThrow() {
-        // setDriverClassName() only does Class.forName(...) to trigger the driver's static
-        // registration with java.sql.DriverManager - it stores no field we could inspect.
-        // The meaningful thing to verify is that a loadable class name doesn't blow up.
         assertDoesNotThrow(() -> dataSourceConfig.dataSource());
     }
 

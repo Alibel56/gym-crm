@@ -63,13 +63,6 @@ class TraineeRepositoryTest {
     }
 
     @Test
-    void update_shouldMergeTrainee() {
-        repository.update(trainee);
-
-        verify(session).merge(trainee);
-    }
-
-    @Test
     void findById_shouldReturnTrainee_whenFound() {
         when(session.find(Trainee.class, 1L)).thenReturn(trainee);
 
@@ -152,24 +145,6 @@ class TraineeRepositoryTest {
 
         verify(session, never()).remove(any());
         assertThat(result).isFalse();
-    }
-
-    @Test
-    void switchActive_shouldToggleActiveStatus_whenFound() {
-        when(session.find(Trainee.class, 1L)).thenReturn(trainee);
-        boolean before = user.getIsActive();
-
-        repository.switchActive(1L);
-
-        assertThat(user.getIsActive()).isEqualTo(!before);
-    }
-
-    @Test
-    void switchActive_shouldThrowException_whenNotFound() {
-        when(session.find(Trainee.class, 1L)).thenReturn(null);
-
-        assertThatThrownBy(() -> repository.switchActive(1L))
-                .isInstanceOf(EntityNotFoundException.class);
     }
 
     @Test

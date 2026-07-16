@@ -3,12 +3,21 @@ package com.practice.service;
 import com.practice.dao.TraineeRepositoryImpl;
 import com.practice.dao.TrainerRepositoryImpl;
 import com.practice.dao.TrainingTypeRepository;
+import com.practice.dto.request.*;
+import com.practice.dto.response.GetTrainerProfileResponse;
+import com.practice.dto.response.RegistrationResponse;
+import com.practice.dto.response.TrainerSummaryResponse;
+import com.practice.dto.response.UpdateTrainerProfileResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.User;
-import com.practice.exception.AuthenticationException;
+import com.practice.mapper.request.TrainerRegistrationRequestMapper;
+import com.practice.mapper.response.GetTrainerProfileResponseMapper;
+import com.practice.mapper.response.TrainerRegistrationResponseMapper;
+import com.practice.mapper.response.TrainerSummaryResponseMapper;
+import com.practice.mapper.response.UpdateTrainerProfileResponseMapper;
+import com.practice.utility.Credentials;
 import com.practice.utility.ServiceUtility;
-import com.practice.utility.Validator;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -29,6 +39,13 @@ public class TrainerService {
     private TrainerRepositoryImpl trainerRepository;
     private TraineeRepositoryImpl traineeRepository;
     private TrainingTypeRepository trainingTypeRepository;
+    private UserService userService;
+
+    private TrainerRegistrationRequestMapper trainerRegistrationRequestMapper;
+    private TrainerRegistrationResponseMapper registrationResponseMapper;
+    private UpdateTrainerProfileResponseMapper updateTrainerProfileResponseMapper;
+    private GetTrainerProfileResponseMapper getTrainerProfileResponseMapper;
+    private TrainerSummaryResponseMapper trainerSummaryResponseMapper;
 
     @Autowired
     public void setTrainerRepository(TrainerRepositoryImpl trainerRepository) {
@@ -45,48 +62,73 @@ public class TrainerService {
         this.trainingTypeRepository = trainingTypeRepository;
     }
 
-    @Transactional
-    public long create(Trainer trainerCreate) {
-        Validator.validateTrainerForCreate(trainerCreate);
+    @Autowired
+    public void setUserService(UserService userService) {
+        this.userService = userService;
+    }
 
-        boolean exists = trainingTypeRepository.findAll().stream()
-                .anyMatch(t -> t.equals(trainerCreate.getTrainingType()));
+    @Autowired
+    public void setTrainerRegistrationRequestMapper(TrainerRegistrationRequestMapper trainerRegistrationRequestMapper) {
+        this.trainerRegistrationRequestMapper = trainerRegistrationRequestMapper;
+    }
 
-        if (!exists) {
-            throw new IllegalArgumentException("TrainingType does not exist");
-        }
+    @Autowired
+    public void setRegistrationResponseMapper(TrainerRegistrationResponseMapper registrationResponseMapper) {
+        this.registrationResponseMapper = registrationResponseMapper;
+    }
 
-        List<User> allUsers = new ArrayList<>();
-        allUsers.addAll(traineeRepository.findAll().stream().map(Trainee::getUser).toList());
-        allUsers.addAll(trainerRepository.findAll().stream().map(Trainer::getUser).toList());
+    @Autowired
+    public void setUpdateTrainerProfileResponseMapper(UpdateTrainerProfileResponseMapper updateTrainerProfileResponseMapper) {
+        this.updateTrainerProfileResponseMapper = updateTrainerProfileResponseMapper;
+    }
 
-        String userName = ServiceUtility.generateUserName(
-                trainerCreate.getUser().getFirstName(),
-                trainerCreate.getUser().getLastName(),
-                allUsers);
-        String password = ServiceUtility.generatePassword();
+    @Autowired
+    public void setGetTrainerProfileResponseMapper(GetTrainerProfileResponseMapper getTrainerProfileResponseMapper) {
+        this.getTrainerProfileResponseMapper = getTrainerProfileResponseMapper;
+    }
 
-        trainerCreate.getUser().setUserName(userName);
-        trainerCreate.getUser().setPassword(password);
-        trainerCreate.getUser().setIsActive(true);
-
-        Long id = trainerRepository.save(trainerCreate).getId();
-        log.info("Created trainer profile id={} username={}", id, userName);
-        return id;
+    @Autowired
+    public void setTrainerSummaryResponseMapper(TrainerSummaryResponseMapper trainerSummaryResponseMapper) {
+        this.trainerSummaryResponseMapper = trainerSummaryResponseMapper;
     }
 
     @Transactional
-    public boolean update(String authUsername, String authPassword, Trainer trainerUpdate) {
-        authenticate(authUsername, authPassword);
-        Validator.validateTrainerForCreate(trainerUpdate);
+    public RegistrationResponse create(TrainerRegistrationRequest request) {
+        Trainer trainerCreate = trainerRegistrationRequestMapper.mapFrom(request);
+        var trainingType = trainingTypeRepository.findById(request.specializationId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "TrainingType with id " + request.specializationId() + " does not exist"
+                ));
 
-        var maybeEntity = trainerRepository.findById(trainerUpdate.getId());
-        maybeEntity.ifPresentOrElse(
-                t -> trainerRepository.update(trainerUpdate),
-                () -> { throw new EntityNotFoundException("Trainer with id " + trainerUpdate.getId() + " not found"); }
+        trainerCreate.setTrainingType(trainingType);
+
+        Credentials credentials = userService.generateCredentials(
+                trainerCreate.getUser().getFirstName(),
+                trainerCreate.getUser().getLastName()
         );
-        log.info("Updated trainer id={}", trainerUpdate.getId());
-        return maybeEntity.isPresent();
+
+        trainerCreate.getUser().setUserName(credentials.username());
+        trainerCreate.getUser().setPassword(credentials.password());
+        trainerCreate.getUser().setIsActive(true);
+
+        Trainer saved = trainerRepository.save(trainerCreate);
+        log.info("Created trainer profile username={}", credentials.username());
+        return registrationResponseMapper.mapFrom(saved);
+    }
+
+    @Transactional
+    public UpdateTrainerProfileResponse update(UpdateTrainerProfileRequest request) {
+
+        Trainer trainer = trainerRepository.findByUsername(request.userName())
+                .orElseThrow(() -> new EntityNotFoundException("Trainer " + request.userName() + " not found"));
+
+        trainer.getUser().setUserName(request.userName());
+        trainer.getUser().setFirstName(request.firstName());
+        trainer.getUser().setLastName(request.lastName());
+        trainer.getUser().setIsActive(request.isActive());
+
+        log.info("Updated trainer username={}", request.userName());
+        return updateTrainerProfileResponseMapper.mapFrom(trainer);
     }
 
     public Optional<Trainer> findById(Long id) {
@@ -97,55 +139,30 @@ public class TrainerService {
         return trainerRepository.findAll();
     }
 
-    public Optional<Trainer> findByUsername(String authUsername, String authPassword) {
-        authenticate(authUsername, authPassword);
-        return trainerRepository.findByUsername(authUsername);
+    public GetTrainerProfileResponse findByUsername(UsernameRequest request) {
+        return trainerRepository.findByUsername(request.userName())
+                .map(getTrainerProfileResponseMapper::mapFrom)
+                .orElseThrow(() -> new EntityNotFoundException("Trainer " + request.userName() + " not found"));
     }
 
-    public List<Trainer> findAllNotAssignedByTraineeUserName(String traineeUsername, String traineePassword) {
-        authenticateTrainee(traineeUsername, traineePassword);
-        return trainerRepository.findAllNotAssignedByTraineeUserName(traineeUsername);
-    }
-
-    @Transactional
-    public void switchActive(String authUsername, String authPassword) {
-        authenticate(authUsername, authPassword);
-        Trainer trainer = trainerRepository.findByUsername(authUsername)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer " + authUsername + " not found"));
-        trainerRepository.switchActive(trainer.getId());
-        log.info("Toggled isActive for trainer username={}", authUsername);
+    public List<TrainerSummaryResponse> findAllNotAssignedByTraineeUserName(UsernameRequest request) {
+        return trainerRepository.findAllNotAssignedByTraineeUserName(request.userName()).stream()
+                .map(trainer -> trainerSummaryResponseMapper.mapFrom(trainer))
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public void changePassword(String username, String oldPassword, String newPassword) {
-        authenticate(username, oldPassword);
-        Validator.requireNotBlank(newPassword, "newPassword");
-        Trainer trainer = trainerRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainer " + username + " not found"));
-        trainer.getUser().setPassword(newPassword);
-        trainerRepository.update(trainer);
-        log.info("Password changed for trainer username={}", username);
-    }
+    public void switchActive(SwitchActiveFlagRequest request) {
+        Trainer trainer = trainerRepository.findByUsername(request.userName())
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Trainer " + request.userName() + " not found"));
 
-    @Transactional
-    public boolean isMatching(String username, String password) {
-        var trainer = trainerRepository.findByUsername(username);
-        return trainer.map(value -> value.getUser().getPassword().equals(password)).orElse(false);
-    }
+        trainer.getUser().setIsActive(request.isActive());
 
-    private void authenticate(String username, String password) {
-        if (!isMatching(username, password)) {
-            log.warn("Authentication failed for trainer username={}", username);
-            throw new AuthenticationException("Invalid username or password for trainer " + username);
-        }
-    }
-
-    private void authenticateTrainee(String username, String password) {
-        var trainee = traineeRepository.findByUsername(username);
-        boolean matches = trainee.map(t -> t.getUser().getPassword().equals(password)).orElse(false);
-        if (!matches) {
-            log.warn("Authentication failed for trainee username={}", username);
-            throw new AuthenticationException("Invalid username or password for trainee " + username);
-        }
+        log.info(
+                "Changed isActive={} for trainer username={}",
+                request.isActive(),
+                request.userName());
     }
 }

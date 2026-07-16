@@ -64,13 +64,6 @@ class TrainerRepositoryTest {
     }
 
     @Test
-    void update_shouldMergeTrainer() {
-        repository.update(trainer);
-
-        verify(session).merge(trainer);
-    }
-
-    @Test
     void findById_shouldReturnTrainer_whenFound() {
         when(session.find(Trainer.class, 1L)).thenReturn(trainer);
 

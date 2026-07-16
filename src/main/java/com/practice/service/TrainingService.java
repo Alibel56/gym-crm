@@ -3,13 +3,20 @@ package com.practice.service;
 import com.practice.dao.TraineeRepository;
 import com.practice.dao.TrainerRepository;
 import com.practice.dao.TrainingRepository;
+import com.practice.dto.request.CreateTrainingRequest;
+import com.practice.dto.request.GetTraineeTrainingsListRequest;
+import com.practice.dto.request.GetTrainerTrainingsListRequest;
+import com.practice.dto.response.GetTraineeTrainingsListResponse;
+import com.practice.dto.response.GetTrainerTrainingsListResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.Training;
-import com.practice.exception.AuthenticationException;
-import com.practice.exception.ValidationException;
+import com.practice.mapper.request.CreateTrainingRequestMapper;
+import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
+import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
+import com.practice.mapper.response.GetTraineeTrainingsListResponseMapper;
+import com.practice.mapper.response.GetTrainerTrainingsListResponseMapper;
 import com.practice.utility.Criteria;
-import com.practice.utility.Validator;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -29,6 +37,13 @@ public class TrainingService {
     private TrainingRepository trainingRepository;
     private TrainerRepository trainerRepository;
     private TraineeRepository traineeRepository;
+
+    private CreateTrainingRequestMapper createTrainingRequestMapper;
+    private GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper;
+    private GetTraineeTrainingsListRequestMapper getTraineeTrainingsListRequestMapper;
+    private GetTraineeTrainingsListResponseMapper getTraineeTrainingsListResponseMapper;
+    private GetTrainerTrainingsListResponseMapper getTrainerTrainingsListResponseMapper;
+
 
     @Autowired
     public void setTrainingRepository(TrainingRepository trainingRepository) {
@@ -45,28 +60,49 @@ public class TrainingService {
         this.traineeRepository = traineeRepository;
     }
 
+    @Autowired
+    public void setCreateTrainingRequestMapper(CreateTrainingRequestMapper createTrainingRequestMapper) {
+        this.createTrainingRequestMapper = createTrainingRequestMapper;
+    }
+
+    @Autowired
+    public void setGetTrainerTrainingsListRequestMapper(GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper) {
+        this.getTrainerTrainingsListRequestMapper = getTrainerTrainingsListRequestMapper;
+    }
+
+    @Autowired
+    public void setGetTraineeTrainingsListRequestMapper(GetTraineeTrainingsListRequestMapper getTraineeTrainingsListRequestMapper) {
+        this.getTraineeTrainingsListRequestMapper = getTraineeTrainingsListRequestMapper;
+    }
+
+    @Autowired
+    public void setGetTraineeTrainingsListResponseMapper(GetTraineeTrainingsListResponseMapper getTraineeTrainingsListResponseMapper) {
+        this.getTraineeTrainingsListResponseMapper = getTraineeTrainingsListResponseMapper;
+    }
+
+    @Autowired
+    public void setGetTrainerTrainingsListResponseMapper(GetTrainerTrainingsListResponseMapper getTrainerTrainingsListResponseMapper) {
+        this.getTrainerTrainingsListResponseMapper = getTrainerTrainingsListResponseMapper;
+    }
+
     @Transactional
-    public Long create(String traineeUsername, String traineePassword, Training trainingCreate) {
-        authenticateTrainee(traineeUsername, traineePassword);
-        Validator.validateTrainingForCreate(trainingCreate);
+    public void create(CreateTrainingRequest request) {
 
-        Trainer trainer = trainerRepository.findById(trainingCreate.getTrainer().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Trainer's id in new training not found"));
+        Training trainingCreate = createTrainingRequestMapper.mapFrom(request);
 
-        if (!trainer.getTrainingType().equals(trainingCreate.getTrainingType())) {
-            throw new ValidationException("Trainer's specialization does not match");
-        }
+        Trainer trainer = trainerRepository.findByUsername(request.trainerUserName())
+                .orElseThrow(() -> new EntityNotFoundException("Trainer's username in new training not found"));
 
-        Trainee trainee = traineeRepository.findByUsername(traineeUsername)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee's id in new training not found"));
+        trainingCreate.setTrainer(trainer);
+        trainingCreate.setTrainingType(trainer.getTrainingType());
 
-        if (!trainee.getId().equals(trainingCreate.getTrainee().getId())) {
-            throw new ValidationException("Training's trainee does not match the authenticated trainee");
-        }
+        Trainee trainee = traineeRepository.findByUsername(request.traineeUserName())
+                .orElseThrow(() -> new EntityNotFoundException("Trainee's username in new training not found"));
 
-        Long id = trainingRepository.save(trainingCreate).getId();
-        log.info("Created training id={} trainee={} trainer={}", id, traineeUsername, trainer.getUser().getUserName());
-        return id;
+        trainingCreate.setTrainee(trainee);
+
+        Training saved = trainingRepository.save(trainingCreate);
+        log.info("Created training trainee={} trainer={}", request.traineeUserName(), request.trainerUserName());
     }
 
     public Optional<Training> findById(Long id) {
@@ -77,31 +113,18 @@ public class TrainingService {
         return trainingRepository.findAll();
     }
 
-    public List<Training> findAllTraineeTrainingsByCriteria(String traineeUsername, String traineePassword, Criteria criteria) {
-        authenticateTrainee(traineeUsername, traineePassword);
-        return trainingRepository.findAllTraineeTrainingsByCriteria(traineeUsername, criteria);
+    public List<GetTraineeTrainingsListResponse> findAllTraineeTrainings(GetTraineeTrainingsListRequest request) {
+        Criteria criteria = getTraineeTrainingsListRequestMapper.mapFrom(request);
+        return trainingRepository.findAllTraineeTrainingsByCriteria(request.userName(), criteria).stream()
+                .map(getTraineeTrainingsListResponseMapper::mapFrom)
+                .collect(Collectors.toList());
     }
 
-    public List<Training> findAllTrainerTrainingsByCriteria(String trainerUsername, String trainerPassword, Criteria criteria) {
-        authenticateTrainer(trainerUsername, trainerPassword);
-        return trainingRepository.findAllTrainerTrainingsByCriteria(trainerUsername, criteria);
+    public List<GetTrainerTrainingsListResponse> findAllTrainerTrainings(GetTrainerTrainingsListRequest request) {
+        Criteria criteria = getTrainerTrainingsListRequestMapper.mapFrom(request);
+        return trainingRepository.findAllTrainerTrainingsByCriteria(request.userName(), criteria).stream()
+                .map(getTrainerTrainingsListResponseMapper::mapFrom)
+                .collect(Collectors.toList());
     }
 
-    private void authenticateTrainee(String username, String password) {
-        var trainee = traineeRepository.findByUsername(username);
-        boolean matches = trainee.map(t -> t.getUser().getPassword().equals(password)).orElse(false);
-        if (!matches) {
-            log.warn("Authentication failed for trainee username={}", username);
-            throw new AuthenticationException("Invalid username or password for trainee " + username);
-        }
-    }
-
-    private void authenticateTrainer(String username, String password) {
-        var trainer = trainerRepository.findByUsername(username);
-        boolean matches = trainer.map(t -> t.getUser().getPassword().equals(password)).orElse(false);
-        if (!matches) {
-            log.warn("Authentication failed for trainer username={}", username);
-            throw new AuthenticationException("Invalid username or password for trainer " + username);
-        }
-    }
 }

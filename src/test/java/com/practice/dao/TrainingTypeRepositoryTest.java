@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
@@ -39,20 +40,71 @@ class TrainingTypeRepositoryTest {
     }
 
     @Test
+    void findById_shouldReturnTrainingType_whenExists() {
+        TrainingType cardio = TrainingType.builder()
+                .id(1L)
+                .name("Cardio")
+                .build();
+
+        when(session.createQuery(
+                "from TrainingType where id = :id",
+                TrainingType.class))
+                .thenReturn(query);
+
+        when(query.setParameter("id", 1L)).thenReturn(query);
+        when(query.uniqueResult()).thenReturn(cardio);
+
+        Optional<TrainingType> result = repository.findById(1L);
+
+        assertThat(result)
+                .isPresent()
+                .contains(cardio);
+    }
+
+    @Test
+    void findById_shouldReturnEmptyOptional_whenNotExists() {
+        when(session.createQuery(
+                "from TrainingType where id = :id",
+                TrainingType.class))
+                .thenReturn(query);
+
+        when(query.setParameter("id", 1L)).thenReturn(query);
+        when(query.uniqueResult()).thenReturn(null);
+
+        Optional<TrainingType> result = repository.findById(1L);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
     void findAll_shouldReturnListOfTrainingTypes() {
-        TrainingType cardio = TrainingType.builder().id(1L).name("Cardio").build();
-        TrainingType yoga = TrainingType.builder().id(2L).name("Yoga").build();
-        when(session.createQuery("from TrainingType", TrainingType.class)).thenReturn(query);
+        TrainingType cardio = TrainingType.builder()
+                .id(1L)
+                .name("Cardio")
+                .build();
+
+        TrainingType yoga = TrainingType.builder()
+                .id(2L)
+                .name("Yoga")
+                .build();
+
+        when(session.createQuery("from TrainingType", TrainingType.class))
+                .thenReturn(query);
+
         when(query.list()).thenReturn(List.of(cardio, yoga));
 
         List<TrainingType> result = repository.findAll();
 
-        assertThat(result).hasSize(2).containsExactly(cardio, yoga);
+        assertThat(result)
+                .hasSize(2)
+                .containsExactly(cardio, yoga);
     }
 
     @Test
     void findAll_shouldReturnEmptyList_whenNoTrainingTypes() {
-        when(session.createQuery("from TrainingType", TrainingType.class)).thenReturn(query);
+        when(session.createQuery("from TrainingType", TrainingType.class))
+                .thenReturn(query);
+
         when(query.list()).thenReturn(List.of());
 
         List<TrainingType> result = repository.findAll();

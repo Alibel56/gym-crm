@@ -1,6 +1,5 @@
 package com.practice.dao;
 
-import com.practice.entity.Trainee;
 import com.practice.entity.Training;
 import com.practice.utility.Criteria;
 
