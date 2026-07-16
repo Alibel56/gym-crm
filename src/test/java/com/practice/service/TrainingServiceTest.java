@@ -203,7 +203,6 @@ class TrainingServiceTest {
         when(trainerRepository.findByUsername("unknown.trainer"))
                 .thenReturn(Optional.empty());
 
-         / then
         assertThatThrownBy(() ->
                 trainingService.create(request))
                 .isInstanceOf(EntityNotFoundException.class)
@@ -244,7 +243,7 @@ class TrainingServiceTest {
         when(traineeRepository.findByUsername("unknown.trainee"))
                 .thenReturn(Optional.empty());
 
-         / then
+
         assertThatThrownBy(() ->
                 trainingService.create(request))
                 .isInstanceOf(EntityNotFoundException.class)
