@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: gym-crm
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    driver-class-name: org.postgresql.Driver
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /gym
+
+hibernate:
+  show_sql: false
+  format_sql: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    status:
+      order: DOWN, DEGRADED, OUT_OF_SERVICE, UNKNOWN, UP
+      http-mapping:
+        DEGRADED: 200
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+info:
+  app:
+    name: Gym CRM
+    description: Trainee / Trainer / Training management REST API

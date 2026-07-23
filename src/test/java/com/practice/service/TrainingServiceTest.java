@@ -18,6 +18,7 @@ import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
 import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
 import com.practice.mapper.response.GetTraineeTrainingsListResponseMapper;
 import com.practice.mapper.response.GetTrainerTrainingsListResponseMapper;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Criteria;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +65,9 @@ class TrainingServiceTest {
     private GetTrainerTrainingsListResponseMapper
             getTrainerTrainingsListResponseMapper;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     private TrainingService trainingService;
 
     @BeforeEach
@@ -73,6 +77,7 @@ class TrainingServiceTest {
         trainingService.setTrainingRepository(trainingRepository);
         trainingService.setTrainerRepository(trainerRepository);
         trainingService.setTraineeRepository(traineeRepository);
+        trainingService.setGymMetrics(gymMetrics);
         trainingService.setCreateTrainingRequestMapper(
                 createTrainingRequestMapper
         );
@@ -134,7 +139,7 @@ class TrainingServiceTest {
 
     @Test
     void create_shouldCreateTraining() {
-        
+
         CreateTrainingRequest request =
                 mock(CreateTrainingRequest.class);
 
@@ -160,10 +165,10 @@ class TrainingServiceTest {
         when(trainingRepository.save(training))
                 .thenReturn(training);
 
-        
+
         trainingService.create(request);
 
-        
+
         assertThat(training.getTrainer())
                 .isSameAs(trainer);
 
@@ -184,11 +189,14 @@ class TrainingServiceTest {
 
         verify(trainingRepository)
                 .save(training);
+
+        verify(gymMetrics).startTrainingCreationTimer();
+        verify(gymMetrics).stopTrainingCreationTimer(any());
     }
 
     @Test
     void create_shouldThrowWhenTrainerNotFound() {
-        
+
         CreateTrainingRequest request =
                 mock(CreateTrainingRequest.class);
 
@@ -221,7 +229,7 @@ class TrainingServiceTest {
 
     @Test
     void create_shouldThrowWhenTraineeNotFound() {
-        
+
         CreateTrainingRequest request =
                 mock(CreateTrainingRequest.class);
 
@@ -263,17 +271,17 @@ class TrainingServiceTest {
 
     @Test
     void findById_shouldReturnTraining() {
-        
+
         Training training = createTraining();
 
         when(trainingRepository.findById(1L))
                 .thenReturn(Optional.of(training));
 
-        
+
         Optional<Training> result =
                 trainingService.findById(1L);
 
-        
+
         assertThat(result)
                 .isPresent()
                 .contains(training);
@@ -284,15 +292,15 @@ class TrainingServiceTest {
 
     @Test
     void findById_shouldReturnEmptyOptionalWhenTrainingNotFound() {
-        
+
         when(trainingRepository.findById(100L))
                 .thenReturn(Optional.empty());
 
-        
+
         Optional<Training> result =
                 trainingService.findById(100L);
 
-        
+
         assertThat(result).isEmpty();
 
         verify(trainingRepository)
@@ -301,7 +309,7 @@ class TrainingServiceTest {
 
     @Test
     void findAll_shouldReturnAllTrainings() {
-        
+
         Training firstTraining = Training.builder()
                 .id(1L)
                 .build();
@@ -316,11 +324,11 @@ class TrainingServiceTest {
                         secondTraining
                 ));
 
-        
+
         List<Training> result =
                 trainingService.findAll();
 
-        
+
         assertThat(result)
                 .containsExactly(
                         firstTraining,
@@ -333,7 +341,7 @@ class TrainingServiceTest {
 
     @Test
     void findAllTraineeTrainings_shouldReturnMappedResponses() {
-        
+
         GetTraineeTrainingsListRequest request =
                 mock(GetTraineeTrainingsListRequest.class);
 
@@ -373,11 +381,11 @@ class TrainingServiceTest {
         when(getTraineeTrainingsListResponseMapper.mapFrom(secondTraining))
                 .thenReturn(secondResponse);
 
-        
+
         List<GetTraineeTrainingsListResponse> result =
                 trainingService.findAllTraineeTrainings(request);
 
-        
+
         assertThat(result)
                 .containsExactly(
                         firstResponse,
@@ -402,7 +410,7 @@ class TrainingServiceTest {
 
     @Test
     void findAllTraineeTrainings_shouldReturnEmptyList() {
-        
+
         GetTraineeTrainingsListRequest request =
                 mock(GetTraineeTrainingsListRequest.class);
 
@@ -419,11 +427,11 @@ class TrainingServiceTest {
                 criteria
         )).thenReturn(List.of());
 
-        
+
         List<GetTraineeTrainingsListResponse> result =
                 trainingService.findAllTraineeTrainings(request);
 
-        
+
         assertThat(result).isEmpty();
 
         verifyNoInteractions(
@@ -433,7 +441,7 @@ class TrainingServiceTest {
 
     @Test
     void findAllTrainerTrainings_shouldReturnMappedResponses() {
-        
+
         GetTrainerTrainingsListRequest request =
                 mock(GetTrainerTrainingsListRequest.class);
 
@@ -473,11 +481,11 @@ class TrainingServiceTest {
         when(getTrainerTrainingsListResponseMapper.mapFrom(secondTraining))
                 .thenReturn(secondResponse);
 
-        
+
         List<GetTrainerTrainingsListResponse> result =
                 trainingService.findAllTrainerTrainings(request);
 
-        
+
         assertThat(result)
                 .containsExactly(
                         firstResponse,
@@ -502,7 +510,7 @@ class TrainingServiceTest {
 
     @Test
     void findAllTrainerTrainings_shouldReturnEmptyList() {
-        
+
         GetTrainerTrainingsListRequest request =
                 mock(GetTrainerTrainingsListRequest.class);
 
@@ -519,11 +527,11 @@ class TrainingServiceTest {
                 criteria
         )).thenReturn(List.of());
 
-        
+
         List<GetTrainerTrainingsListResponse> result =
                 trainingService.findAllTrainerTrainings(request);
 
-        
+
         assertThat(result).isEmpty();
 
         verifyNoInteractions(

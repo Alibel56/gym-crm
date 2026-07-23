@@ -16,7 +16,9 @@ import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
 import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
 import com.practice.mapper.response.GetTraineeTrainingsListResponseMapper;
 import com.practice.mapper.response.GetTrainerTrainingsListResponseMapper;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Criteria;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ public class TrainingService {
     private TrainingRepository trainingRepository;
     private TrainerRepository trainerRepository;
     private TraineeRepository traineeRepository;
+    private GymMetrics gymMetrics;
 
     private CreateTrainingRequestMapper createTrainingRequestMapper;
     private GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper;
@@ -58,6 +61,11 @@ public class TrainingService {
     @Autowired
     public void setTraineeRepository(TraineeRepository traineeRepository) {
         this.traineeRepository = traineeRepository;
+    }
+
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
     }
 
     @Autowired
@@ -88,6 +96,8 @@ public class TrainingService {
     @Transactional
     public void create(CreateTrainingRequest request) {
 
+        Timer.Sample timerSample = gymMetrics.startTrainingCreationTimer();
+
         Training trainingCreate = createTrainingRequestMapper.mapFrom(request);
 
         Trainer trainer = trainerRepository.findByUsername(request.trainerUserName())
@@ -102,6 +112,7 @@ public class TrainingService {
         trainingCreate.setTrainee(trainee);
 
         Training saved = trainingRepository.save(trainingCreate);
+        gymMetrics.stopTrainingCreationTimer(timerSample);
         log.info("Created training trainee={} trainer={}", request.traineeUserName(), request.trainerUserName());
     }
 

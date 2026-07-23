@@ -5,6 +5,7 @@ import com.practice.dto.request.LoginRequest;
 import com.practice.dto.request.UpdateLoginRequest;
 import com.practice.entity.User;
 import com.practice.exception.AuthenticationException;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,12 +26,16 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         userService = new UserService();
         userService.setUserRepository(userRepository);
+        userService.setGymMetrics(gymMetrics);
     }
 
     @Test
@@ -78,6 +83,7 @@ class UserServiceTest {
         assertThat(result.getPassword()).isEqualTo("password123");
 
         verify(userRepository).findByUsername("Alibek.Aglanov");
+        verify(gymMetrics).recordAuthenticationAttempt(true);
     }
 
     @Test
@@ -95,6 +101,7 @@ class UserServiceTest {
                 .hasMessage("Invalid username or password");
 
         verify(userRepository).findByUsername("Unknown.User");
+        verify(gymMetrics).recordAuthenticationAttempt(false);
     }
 
     @Test
@@ -117,6 +124,7 @@ class UserServiceTest {
                 .hasMessage("Invalid username or password");
 
         verify(userRepository).findByUsername("Alibek.Aglanov");
+        verify(gymMetrics).recordAuthenticationAttempt(false);
     }
 
     @Test

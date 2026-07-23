@@ -17,6 +17,7 @@ import com.practice.mapper.response.GetTraineeProfileResponseMapper;
 import com.practice.mapper.response.TraineeRegistrationResponseMapper;
 import com.practice.mapper.response.TrainerSummaryResponseMapper;
 import com.practice.mapper.response.UpdateTraineeProfileResponseMapper;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Credentials;
 import com.practice.utility.ServiceUtility;
 import jakarta.persistence.EntityNotFoundException;
@@ -38,6 +39,7 @@ public class TraineeService {
     private UserService userService;
     private TraineeRepository traineeRepository;
     private TrainerRepository trainerRepository;
+    private GymMetrics gymMetrics;
 
     private TraineeRegistrationRequestMapper traineeRegistrationRequestMapper;
     private TraineeRegistrationResponseMapper registrationResponseMapper;
@@ -58,6 +60,11 @@ public class TraineeService {
     @Autowired
     public void setTrainerRepository(TrainerRepository trainerRepository) {
         this.trainerRepository = trainerRepository;
+    }
+
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
     }
 
     @Autowired
@@ -99,6 +106,7 @@ public class TraineeService {
         traineeCreate.getUser().setIsActive(true);
 
         Trainee saved = traineeRepository.save(traineeCreate);
+        gymMetrics.recordRegistration("trainee");
         log.info("Created trainee profile username={}", saved.getUser().getUserName());
         return registrationResponseMapper.mapFrom(saved);
     }
@@ -169,9 +177,9 @@ public class TraineeService {
                 .orElseThrow(() -> new EntityNotFoundException("Trainee " + request.traineeUserName() + " not found"));
 
         List<Trainer> newTrainers = request.trainersList().stream()
-                        .map(trainerRequest -> trainerRepository.findByUsername(trainerRequest.userName())
-                                .orElseThrow(() -> new EntityNotFoundException("Trainer " + trainerRequest.userName() + " not found")))
-                        .toList();
+                .map(trainerRequest -> trainerRepository.findByUsername(trainerRequest.userName())
+                        .orElseThrow(() -> new EntityNotFoundException("Trainer " + trainerRequest.userName() + " not found")))
+                .toList();
 
         new ArrayList<>(trainee.getTrainers())
                 .forEach(trainee::removeTrainer);

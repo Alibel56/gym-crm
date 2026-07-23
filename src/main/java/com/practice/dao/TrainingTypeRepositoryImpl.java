@@ -37,7 +37,7 @@ public class TrainingTypeRepositoryImpl implements TrainingTypeRepository {
     public List<TrainingType> findAll() {
         log.info("Finding all training types");
         var t = sessionFactory.getCurrentSession().createQuery("from TrainingType", TrainingType.class).list();
-        log.info("Found {} trainings", t.size());
+        log.info("Found {} trainings types", t.size());
         return t;
     }
 

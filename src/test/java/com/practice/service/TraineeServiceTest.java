@@ -15,6 +15,7 @@ import com.practice.mapper.response.GetTraineeProfileResponseMapper;
 import com.practice.mapper.response.TraineeRegistrationResponseMapper;
 import com.practice.mapper.response.TrainerSummaryResponseMapper;
 import com.practice.mapper.response.UpdateTraineeProfileResponseMapper;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Credentials;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +60,9 @@ class TraineeServiceTest {
     @Mock
     private TrainerSummaryResponseMapper trainerSummaryResponseMapper;
 
+    @Mock
+    private GymMetrics gymMetrics;
+
     private TraineeService traineeService;
 
     @BeforeEach
@@ -68,6 +72,7 @@ class TraineeServiceTest {
         traineeService.setUserService(userService);
         traineeService.setTraineeRepository(traineeRepository);
         traineeService.setTrainerRepository(trainerRepository);
+        traineeService.setGymMetrics(gymMetrics);
         traineeService.setTraineeRegistrationRequestMapper(
                 traineeRegistrationRequestMapper
         );
@@ -128,6 +133,8 @@ class TraineeServiceTest {
                 traineeService.create(request);
 
         assertThat(actualResponse).isSameAs(expectedResponse);
+
+        verify(gymMetrics).recordRegistration("trainee");
 
         assertThat(user.getUserName())
                 .isEqualTo("Alibek.Aglanov");

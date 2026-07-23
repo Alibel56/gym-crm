@@ -5,6 +5,7 @@ import com.practice.dto.request.LoginRequest;
 import com.practice.dto.request.UpdateLoginRequest;
 import com.practice.entity.User;
 import com.practice.exception.AuthenticationException;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Credentials;
 import com.practice.utility.ServiceUtility;
 import org.slf4j.Logger;
@@ -21,10 +22,16 @@ public class UserService {
             LoggerFactory.getLogger(UserService.class);
 
     private UserRepository userRepository;
+    private GymMetrics gymMetrics;
 
     @Autowired
     public void setUserRepository(UserRepository userRepository) {
         this.userRepository = userRepository;
+    }
+
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
     }
 
     public Credentials generateCredentials(
@@ -43,19 +50,26 @@ public class UserService {
     }
 
     public User authenticate(LoginRequest request) {
-        User user = userRepository.findByUsername(request.userName())
-                .orElseThrow(() ->
-                        new AuthenticationException(
-                                "Invalid username or password"
-                        ));
+        try {
+            User user = userRepository.findByUsername(request.userName())
+                    .orElseThrow(() ->
+                            new AuthenticationException(
+                                    "Invalid username or password"
+                            ));
 
-        if (!user.getPassword().equals(request.password())) {
-            throw new AuthenticationException(
-                    "Invalid username or password"
-            );
+            if (!user.getPassword().equals(request.password())) {
+                throw new AuthenticationException(
+                        "Invalid username or password"
+                );
+            }
+
+            gymMetrics.recordAuthenticationAttempt(true);
+            return user;
+        } catch (AuthenticationException ex) {
+            gymMetrics.recordAuthenticationAttempt(false);
+            log.warn("Authentication failed for username={}", request.userName());
+            throw ex;
         }
-
-        return user;
     }
 
     @Transactional

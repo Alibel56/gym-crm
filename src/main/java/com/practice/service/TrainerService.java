@@ -16,6 +16,7 @@ import com.practice.mapper.response.GetTrainerProfileResponseMapper;
 import com.practice.mapper.response.TrainerRegistrationResponseMapper;
 import com.practice.mapper.response.TrainerSummaryResponseMapper;
 import com.practice.mapper.response.UpdateTrainerProfileResponseMapper;
+import com.practice.metrics.GymMetrics;
 import com.practice.utility.Credentials;
 import com.practice.utility.ServiceUtility;
 import jakarta.persistence.EntityNotFoundException;
@@ -40,6 +41,7 @@ public class TrainerService {
     private TraineeRepositoryImpl traineeRepository;
     private TrainingTypeRepository trainingTypeRepository;
     private UserService userService;
+    private GymMetrics gymMetrics;
 
     private TrainerRegistrationRequestMapper trainerRegistrationRequestMapper;
     private TrainerRegistrationResponseMapper registrationResponseMapper;
@@ -65,6 +67,11 @@ public class TrainerService {
     @Autowired
     public void setUserService(UserService userService) {
         this.userService = userService;
+    }
+
+    @Autowired
+    public void setGymMetrics(GymMetrics gymMetrics) {
+        this.gymMetrics = gymMetrics;
     }
 
     @Autowired
@@ -112,6 +119,7 @@ public class TrainerService {
         trainerCreate.getUser().setIsActive(true);
 
         Trainer saved = trainerRepository.save(trainerCreate);
+        gymMetrics.recordRegistration("trainer");
         log.info("Created trainer profile username={}", credentials.username());
         return registrationResponseMapper.mapFrom(saved);
     }

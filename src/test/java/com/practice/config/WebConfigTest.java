@@ -48,9 +48,9 @@ class WebConfigTest {
         verify(registration).addPathPatterns("/api/**");
 
         verify(registration).excludePathPatterns(
-                "/api/trainees",
-                "/api/trainers",
-                "/api/login"
+                "/api/auth/trainee/register",
+                "/api/auth/trainer/register",
+                "/api/auth/login"
         );
     }
 
