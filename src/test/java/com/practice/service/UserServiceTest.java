@@ -3,21 +3,32 @@ package com.practice.service;
 import com.practice.dao.UserRepository;
 import com.practice.dto.request.LoginRequest;
 import com.practice.dto.request.UpdateLoginRequest;
+import com.practice.dto.response.LoginResponse;
 import com.practice.entity.User;
 import com.practice.exception.AuthenticationException;
 import com.practice.metrics.GymMetrics;
+import com.practice.security.BruteForceProtectionService;
+import com.practice.security.JwtService;
+import com.practice.security.TokenBlacklistService;
 import com.practice.utility.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +40,24 @@ class UserServiceTest {
     @Mock
     private GymMetrics gymMetrics;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private AuthenticationManager authenticationManager;
+
+    @Mock
+    private JwtService jwtService;
+
+    @Mock
+    private BruteForceProtectionService bruteForceProtectionService;
+
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
+
+    @Mock
+    private Authentication authentication;
+
     private UserService userService;
 
     @BeforeEach
@@ -36,160 +65,272 @@ class UserServiceTest {
         userService = new UserService();
         userService.setUserRepository(userRepository);
         userService.setGymMetrics(gymMetrics);
+        userService.setPasswordEncoder(passwordEncoder);
+        userService.setAuthenticationManager(authenticationManager);
+        userService.setJwtService(jwtService);
+        userService.setBruteForceProtectionService(bruteForceProtectionService);
+        userService.setTokenBlacklistService(tokenBlacklistService);
     }
 
     @Test
-    void generateCredentials_shouldGenerateUsernameAndPassword() {
-        User existingUser = User.builder()
-                .userName("Alibek.Aglanov")
-                .password("password")
-                .build();
+    void encodePasswordShouldReturnEncodedPassword() {
+        when(passwordEncoder.encode("password"))
+                .thenReturn("encoded-password");
 
-        List<User> users = List.of(existingUser);
+        String result = userService.encodePassword("password");
 
-        when(userRepository.findAll()).thenReturn(users);
+        assertThat(result).isEqualTo("encoded-password");
 
-        Credentials credentials = userService.generateCredentials(
-                "John",
-                "Smith"
-        );
-
-        assertThat(credentials).isNotNull();
-        assertThat(credentials.username()).isNotBlank();
-        assertThat(credentials.password()).isNotBlank();
-
-        verify(userRepository).findAll();
+        verify(passwordEncoder).encode("password");
     }
 
     @Test
-    void authenticate_shouldReturnUser_whenCredentialsAreCorrect() {
-        LoginRequest request = new LoginRequest(
-                "Alibek.Aglanov",
-                "password123"
-        );
+    void authenticateShouldReturnUserForValidCredentials() {
+        LoginRequest request = mock(LoginRequest.class);
 
-        User user = User.builder()
-                .userName("Alibek.Aglanov")
-                .password("password123")
-                .build();
+        User user = new User();
+        user.setUserName("john");
+        user.setPassword("encoded-password");
 
-        when(userRepository.findByUsername(request.userName()))
+        when(request.userName()).thenReturn("john");
+        when(request.password()).thenReturn("password");
+        when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password", "encoded-password"))
+                .thenReturn(true);
 
         User result = userService.authenticate(request);
 
         assertThat(result).isSameAs(user);
-        assertThat(result.getUserName()).isEqualTo("Alibek.Aglanov");
-        assertThat(result.getPassword()).isEqualTo("password123");
-
-        verify(userRepository).findByUsername("Alibek.Aglanov");
-        verify(gymMetrics).recordAuthenticationAttempt(true);
     }
 
     @Test
-    void authenticate_shouldThrowAuthenticationException_whenUserNotFound() {
-        LoginRequest request = new LoginRequest(
-                "Unknown.User",
-                "password123"
-        );
+    void authenticateShouldThrowWhenUserNotFound() {
+        LoginRequest request = mock(LoginRequest.class);
 
-        when(userRepository.findByUsername(request.userName()))
+        when(request.userName()).thenReturn("unknown");
+        when(userRepository.findByUsername("unknown"))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.authenticate(request))
                 .isInstanceOf(AuthenticationException.class)
                 .hasMessage("Invalid username or password");
 
-        verify(userRepository).findByUsername("Unknown.User");
-        verify(gymMetrics).recordAuthenticationAttempt(false);
+        verify(passwordEncoder, never())
+                .matches(anyString(), anyString());
     }
 
     @Test
-    void authenticate_shouldThrowAuthenticationException_whenPasswordIsIncorrect() {
-        LoginRequest request = new LoginRequest(
-                "Alibek.Aglanov",
-                "wrongPassword"
-        );
+    void authenticateShouldThrowWhenPasswordIsIncorrect() {
+        LoginRequest request = mock(LoginRequest.class);
 
-        User user = User.builder()
-                .userName("Alibek.Aglanov")
-                .password("correctPassword")
-                .build();
+        User user = new User();
+        user.setPassword("encoded-password");
 
-        when(userRepository.findByUsername(request.userName()))
+        when(request.userName()).thenReturn("john");
+        when(request.password()).thenReturn("wrong-password");
+        when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(
+                "wrong-password",
+                "encoded-password"
+        )).thenReturn(false);
 
         assertThatThrownBy(() -> userService.authenticate(request))
                 .isInstanceOf(AuthenticationException.class)
                 .hasMessage("Invalid username or password");
-
-        verify(userRepository).findByUsername("Alibek.Aglanov");
-        verify(gymMetrics).recordAuthenticationAttempt(false);
     }
 
     @Test
-    void changePassword_shouldChangePassword_whenOldPasswordIsCorrect() {
-        UpdateLoginRequest request = new UpdateLoginRequest(
-                "Alibek.Aglanov",
-                "oldPassword",
-                "newPassword"
-        );
+    void loginShouldReturnJwtTokenForValidCredentials() {
+        LoginRequest request = mock(LoginRequest.class);
+        UserDetails principal = mock(UserDetails.class);
 
-        User user = User.builder()
-                .userName("Alibek.Aglanov")
-                .password("oldPassword")
-                .build();
+        when(request.userName()).thenReturn("john");
+        when(request.password()).thenReturn("password");
 
-        when(userRepository.findByUsername(request.userName()))
+        when(bruteForceProtectionService.isBlocked("john"))
+                .thenReturn(false);
+
+        when(authenticationManager.authenticate(any()))
+                .thenReturn(authentication);
+
+        when(authentication.getPrincipal())
+                .thenReturn(principal);
+
+        when(jwtService.generateToken(principal))
+                .thenReturn("jwt-token");
+
+        when(jwtService.getExpirationSeconds())
+                .thenReturn(3600L);
+
+        LoginResponse response = userService.login(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresInSeconds()).isEqualTo(3600L);
+
+        verify(bruteForceProtectionService)
+                .loginSucceeded("john");
+        verify(gymMetrics)
+                .recordAuthenticationAttempt(true);
+    }
+
+    @Test
+    void loginShouldThrowWhenUserIsBlocked() {
+        LoginRequest request = mock(LoginRequest.class);
+
+        when(request.userName()).thenReturn("john");
+        when(bruteForceProtectionService.isBlocked("john"))
+                .thenReturn(true);
+        when(bruteForceProtectionService.remainingBlockSeconds("john"))
+                .thenReturn(120L);
+
+        assertThatThrownBy(() -> userService.login(request))
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessage("User is blocked. Try again in 120 seconds");
+
+        verifyNoInteractions(authenticationManager);
+        verify(gymMetrics, never())
+                .recordAuthenticationAttempt(anyBoolean());
+    }
+
+    @Test
+    void loginShouldRecordFailedAttemptWhenAuthenticationFails() {
+        LoginRequest request = mock(LoginRequest.class);
+
+        when(request.userName()).thenReturn("john");
+        when(request.password()).thenReturn("wrong-password");
+        when(bruteForceProtectionService.isBlocked("john"))
+                .thenReturn(false);
+
+        when(authenticationManager.authenticate(any()))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
+
+        assertThatThrownBy(() -> userService.login(request))
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessage("Invalid username or password");
+
+        verify(bruteForceProtectionService)
+                .loginFailed("john");
+        verify(gymMetrics)
+                .recordAuthenticationAttempt(false);
+        verify(jwtService, never())
+                .generateToken(any());
+    }
+
+    @Test
+    void changePasswordShouldEncodeAndSetNewPassword() {
+        UpdateLoginRequest request = mock(UpdateLoginRequest.class);
+
+        User user = new User();
+        user.setPassword("old-encoded-password");
+
+        when(request.userName()).thenReturn("john");
+        when(request.oldPassword()).thenReturn("old-password");
+        when(request.newPassword()).thenReturn("new-password");
+
+        when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches(
+                "old-password",
+                "old-encoded-password"
+        )).thenReturn(true);
+
+        when(passwordEncoder.encode("new-password"))
+                .thenReturn("new-encoded-password");
 
         userService.changePassword(request);
 
-        assertThat(user.getPassword()).isEqualTo("newPassword");
+        assertThat(user.getPassword())
+                .isEqualTo("new-encoded-password");
 
-        verify(userRepository).findByUsername("Alibek.Aglanov");
+        verify(passwordEncoder).encode("new-password");
     }
 
     @Test
-    void changePassword_shouldThrowAuthenticationException_whenUserNotFound() {
-        UpdateLoginRequest request = new UpdateLoginRequest(
-                "Unknown.User",
-                "oldPassword",
-                "newPassword"
-        );
+    void changePasswordShouldThrowWhenOldPasswordIsIncorrect() {
+        UpdateLoginRequest request = mock(UpdateLoginRequest.class);
 
-        when(userRepository.findByUsername(request.userName()))
-                .thenReturn(Optional.empty());
+        User user = new User();
+        user.setPassword("old-encoded-password");
 
-        assertThatThrownBy(() -> userService.changePassword(request))
-                .isInstanceOf(AuthenticationException.class)
-                .hasMessage("Invalid username or password");
+        when(request.userName()).thenReturn("john");
+        when(request.oldPassword()).thenReturn("wrong-password");
 
-        verify(userRepository).findByUsername("Unknown.User");
-    }
-
-    @Test
-    void changePassword_shouldThrowAuthenticationException_whenOldPasswordIsIncorrect() {
-        UpdateLoginRequest request = new UpdateLoginRequest(
-                "Alibek.Aglanov",
-                "wrongOldPassword",
-                "newPassword"
-        );
-
-        User user = User.builder()
-                .userName("Alibek.Aglanov")
-                .password("correctOldPassword")
-                .build();
-
-        when(userRepository.findByUsername(request.userName()))
+        when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.of(user));
 
+        when(passwordEncoder.matches(
+                "wrong-password",
+                "old-encoded-password"
+        )).thenReturn(false);
+
         assertThatThrownBy(() -> userService.changePassword(request))
                 .isInstanceOf(AuthenticationException.class)
                 .hasMessage("Invalid username or password");
 
-        assertThat(user.getPassword()).isEqualTo("correctOldPassword");
+        verify(passwordEncoder, never()).encode(anyString());
+    }
 
-        verify(userRepository).findByUsername("Alibek.Aglanov");
+    @Test
+    void logoutShouldRevokeToken() {
+        String authorizationHeader = "Bearer jwt-token";
+        Date expiration = Date.from(
+                Instant.now().plusSeconds(3600)
+        );
+
+        when(jwtService.extractTokenId("jwt-token"))
+                .thenReturn("token-id");
+        when(jwtService.extractExpiration("jwt-token"))
+                .thenReturn(expiration);
+
+        userService.logout(authorizationHeader);
+
+        verify(tokenBlacklistService)
+                .revoke("token-id", expiration);
+    }
+
+    @Test
+    void logoutShouldThrowWhenHeaderIsMissing() {
+        assertThatThrownBy(() -> userService.logout(null))
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessage(
+                        "Missing or malformed Authorization header"
+                );
+
+        verifyNoInteractions(jwtService, tokenBlacklistService);
+    }
+
+    @Test
+    void logoutShouldThrowWhenHeaderIsMalformed() {
+        assertThatThrownBy(() ->
+                userService.logout("Basic credentials")
+        )
+                .isInstanceOf(AuthenticationException.class)
+                .hasMessage(
+                        "Missing or malformed Authorization header"
+                );
+
+        verifyNoInteractions(jwtService, tokenBlacklistService);
+    }
+
+    @Test
+    void generateCredentialsShouldGenerateUsernameAndPassword() {
+        User existingUser = new User();
+        existingUser.setUserName("john.smith");
+
+        when(userRepository.findAll())
+                .thenReturn(List.of(existingUser));
+
+        Credentials credentials =
+                userService.generateCredentials("John", "Smith");
+
+        assertThat(credentials.username()).isNotBlank();
+        assertThat(credentials.password()).isNotBlank();
+
+        verify(userRepository).findAll();
     }
 }

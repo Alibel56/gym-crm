@@ -28,6 +28,15 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), request, null);
     }
 
+    @ExceptionHandler(org.springframework.security.authentication.LockedException.class)
+    public ResponseEntity<ErrorResponse> handleLocked(
+            org.springframework.security.authentication.LockedException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Login blocked (brute force protection) on {}: {}", request.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.LOCKED, ex.getMessage(), request, null);
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex, HttpServletRequest request) {
         log.warn("Entity not found on {}: {}", request.getRequestURI(), ex.getMessage());

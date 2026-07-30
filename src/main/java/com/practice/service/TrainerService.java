@@ -115,13 +115,13 @@ public class TrainerService {
         );
 
         trainerCreate.getUser().setUserName(credentials.username());
-        trainerCreate.getUser().setPassword(credentials.password());
+        trainerCreate.getUser().setPassword(userService.encodePassword(credentials.password()));
         trainerCreate.getUser().setIsActive(true);
 
         Trainer saved = trainerRepository.save(trainerCreate);
         gymMetrics.recordRegistration("trainer");
         log.info("Created trainer profile username={}", credentials.username());
-        return registrationResponseMapper.mapFrom(saved);
+        return new RegistrationResponse(credentials.username(), credentials.password());
     }
 
     @Transactional

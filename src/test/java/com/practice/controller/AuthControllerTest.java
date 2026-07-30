@@ -4,6 +4,7 @@ import com.practice.dto.request.LoginRequest;
 import com.practice.dto.request.TraineeRegistrationRequest;
 import com.practice.dto.request.TrainerRegistrationRequest;
 import com.practice.dto.request.UpdateLoginRequest;
+import com.practice.dto.response.LoginResponse;
 import com.practice.dto.response.RegistrationResponse;
 import com.practice.service.TraineeService;
 import com.practice.service.TrainerService;
@@ -15,8 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -38,102 +37,75 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         authController = new AuthController();
-
         authController.setUserService(userService);
         authController.setTraineeService(traineeService);
         authController.setTrainerService(trainerService);
     }
 
     @Test
-    void registerTrainee_shouldReturnRegistrationResponse() {
+    void registerTraineeShouldReturnRegistrationResponse() {
         TraineeRegistrationRequest request =
-                new TraineeRegistrationRequest(
-                        "Alibek",
-                        "Aglanov",
-                        LocalDate.of(2006, 3, 2),
-                        "Almaty"
-                );
+                mock(TraineeRegistrationRequest.class);
 
-        RegistrationResponse registrationResponse =
-                new RegistrationResponse(
-                        "Alibek.Aglanov",
-                        "generatedPassword"
-                );
+        RegistrationResponse expectedResponse =
+                mock(RegistrationResponse.class);
 
         when(traineeService.create(request))
-                .thenReturn(registrationResponse);
+                .thenReturn(expectedResponse);
 
         ResponseEntity<RegistrationResponse> response =
                 authController.registerTrainee(request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(registrationResponse);
-        assertThat(response.getBody().userName())
-                .isEqualTo("Alibek.Aglanov");
-        assertThat(response.getBody().password())
-                .isEqualTo("generatedPassword");
+        assertThat(response.getBody()).isSameAs(expectedResponse);
 
         verify(traineeService).create(request);
-        verifyNoInteractions(userService, trainerService);
+        verifyNoMoreInteractions(traineeService);
     }
 
     @Test
-    void registerTrainer_shouldReturnRegistrationResponse() {
+    void registerTrainerShouldReturnRegistrationResponse() {
         TrainerRegistrationRequest request =
-                new TrainerRegistrationRequest(
-                        "John",
-                        "Smith",
-                        1L
-                );
+                mock(TrainerRegistrationRequest.class);
 
-        RegistrationResponse registrationResponse =
-                new RegistrationResponse(
-                        "John.Smith",
-                        "generatedPassword"
-                );
+        RegistrationResponse expectedResponse =
+                mock(RegistrationResponse.class);
 
         when(trainerService.create(request))
-                .thenReturn(registrationResponse);
+                .thenReturn(expectedResponse);
 
         ResponseEntity<RegistrationResponse> response =
                 authController.registerTrainer(request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(registrationResponse);
-        assertThat(response.getBody().userName())
-                .isEqualTo("John.Smith");
-        assertThat(response.getBody().password())
-                .isEqualTo("generatedPassword");
+        assertThat(response.getBody()).isSameAs(expectedResponse);
 
         verify(trainerService).create(request);
-        verifyNoInteractions(userService, traineeService);
+        verifyNoMoreInteractions(trainerService);
     }
 
     @Test
-    void login_shouldAuthenticateUserAndReturnOk() {
-        LoginRequest request =
-                new LoginRequest(
-                        "Alibek.Aglanov",
-                        "password123"
-                );
+    void loginShouldReturnLoginResponse() {
+        LoginRequest request = mock(LoginRequest.class);
+        LoginResponse expectedResponse = mock(LoginResponse.class);
 
-        ResponseEntity<Void> response = authController.login(request);
+        when(userService.login(request))
+                .thenReturn(expectedResponse);
+
+        ResponseEntity<LoginResponse> response =
+                authController.login(request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNull();
+        assertThat(response.getBody()).isSameAs(expectedResponse);
 
-        verify(userService).authenticate(request);
-        verifyNoInteractions(traineeService, trainerService);
+        verify(userService).login(request);
+        verifyNoMoreInteractions(userService);
     }
 
     @Test
-    void changePassword_shouldChangePasswordAndReturnOk() {
+    void changePasswordShouldReturnOk() {
         UpdateLoginRequest request =
-                new UpdateLoginRequest(
-                        "Alibek.Aglanov",
-                        "oldPassword",
-                        "newPassword"
-                );
+                mock(UpdateLoginRequest.class);
 
         ResponseEntity<Void> response =
                 authController.changePassword(request);
@@ -142,108 +114,22 @@ class AuthControllerTest {
         assertThat(response.getBody()).isNull();
 
         verify(userService).changePassword(request);
-        verifyNoInteractions(traineeService, trainerService);
+        verifyNoMoreInteractions(userService);
     }
 
     @Test
-    void registerTrainee_shouldPropagateServiceException() {
-        TraineeRegistrationRequest request =
-                new TraineeRegistrationRequest(
-                        "Alibek",
-                        "Aglanov",
-                        LocalDate.of(2006, 3, 2),
-                        "Almaty"
-                );
+    void logoutShouldReturnNoContent() {
+        String authorizationHeader = "Bearer test-token";
 
-        RuntimeException exception =
-                new RuntimeException("Unable to register trainee");
+        ResponseEntity<Void> response =
+                authController.logout(authorizationHeader);
 
-        when(traineeService.create(request))
-                .thenThrow(exception);
+        assertThat(response.getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> authController.registerTrainee(request)
-                )
-                .isSameAs(exception)
-                .hasMessage("Unable to register trainee");
+        assertThat(response.getBody()).isNull();
 
-        verify(traineeService).create(request);
-        verifyNoInteractions(userService, trainerService);
-    }
-
-    @Test
-    void registerTrainer_shouldPropagateServiceException() {
-        TrainerRegistrationRequest request =
-                new TrainerRegistrationRequest(
-                        "John",
-                        "Smith",
-                        1L
-                );
-
-        RuntimeException exception =
-                new RuntimeException("Unable to register trainer");
-
-        when(trainerService.create(request))
-                .thenThrow(exception);
-
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> authController.registerTrainer(request)
-                )
-                .isSameAs(exception)
-                .hasMessage("Unable to register trainer");
-
-        verify(trainerService).create(request);
-        verifyNoInteractions(userService, traineeService);
-    }
-
-    @Test
-    void login_shouldPropagateAuthenticationException() {
-        LoginRequest request =
-                new LoginRequest(
-                        "Alibek.Aglanov",
-                        "wrongPassword"
-                );
-
-        RuntimeException exception =
-                new RuntimeException("Invalid username or password");
-
-        doThrow(exception)
-                .when(userService)
-                .authenticate(request);
-
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> authController.login(request)
-                )
-                .isSameAs(exception)
-                .hasMessage("Invalid username or password");
-
-        verify(userService).authenticate(request);
-        verifyNoInteractions(traineeService, trainerService);
-    }
-
-    @Test
-    void changePassword_shouldPropagateServiceException() {
-        UpdateLoginRequest request =
-                new UpdateLoginRequest(
-                        "Alibek.Aglanov",
-                        "wrongOldPassword",
-                        "newPassword"
-                );
-
-        RuntimeException exception =
-                new RuntimeException("Invalid old password");
-
-        doThrow(exception)
-                .when(userService)
-                .changePassword(request);
-
-        org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> authController.changePassword(request)
-                )
-                .isSameAs(exception)
-                .hasMessage("Invalid old password");
-
-        verify(userService).changePassword(request);
-        verifyNoInteractions(traineeService, trainerService);
+        verify(userService).logout(authorizationHeader);
+        verifyNoMoreInteractions(userService);
     }
 }

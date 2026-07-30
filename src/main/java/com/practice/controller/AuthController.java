@@ -5,6 +5,7 @@ import com.practice.dto.request.TraineeRegistrationRequest;
 import com.practice.dto.request.TrainerRegistrationRequest;
 import com.practice.dto.request.UpdateLoginRequest;
 import com.practice.dto.response.RegistrationResponse;
+import com.practice.dto.response.LoginResponse;
 import com.practice.service.TraineeService;
 import com.practice.service.TrainerService;
 import com.practice.service.UserService;
@@ -113,12 +114,10 @@ public class AuthController {
             )
     })
     @PostMapping("/login")
-    public ResponseEntity<Void> login(
+    public ResponseEntity<LoginResponse> login(
             @Valid @RequestBody LoginRequest request
     ) {
-        userService.authenticate(request);
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(userService.login(request));
     }
 
     @Operation(
@@ -142,5 +141,14 @@ public class AuthController {
         userService.changePassword(request);
 
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "Logout", description = "Revokes the current JWT token.")
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @RequestHeader("Authorization") String authorizationHeader
+    ) {
+        userService.logout(authorizationHeader);
+        return ResponseEntity.noContent().build();
     }
 }

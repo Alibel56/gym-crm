@@ -102,13 +102,13 @@ public class TraineeService {
         );
 
         traineeCreate.getUser().setUserName(credentials.username());
-        traineeCreate.getUser().setPassword(credentials.password());
+        traineeCreate.getUser().setPassword(userService.encodePassword(credentials.password()));
         traineeCreate.getUser().setIsActive(true);
 
         Trainee saved = traineeRepository.save(traineeCreate);
         gymMetrics.recordRegistration("trainee");
         log.info("Created trainee profile username={}", saved.getUser().getUserName());
-        return registrationResponseMapper.mapFrom(saved);
+        return new RegistrationResponse(credentials.username(), credentials.password());
     }
 
     @Transactional
