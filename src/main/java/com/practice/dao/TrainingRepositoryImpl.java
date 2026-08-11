@@ -33,6 +33,12 @@ public class TrainingRepositoryImpl implements TrainingRepository {
     }
 
     @Override
+    public void delete(Training training) {
+        sessionFactory.getCurrentSession().remove(training);
+        log.info("Deleted training id={}", training.getId());
+    }
+
+    @Override
     public Optional<Training> findById(Long id) {
         log.info("Finding training by id={}", id);
         var t = Optional.ofNullable(sessionFactory.getCurrentSession().find(Training.class, id));

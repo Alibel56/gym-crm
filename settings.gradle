@@ -1,1 +1,3 @@
 rootProject.name = 'sm1_task1'
+include 'workload-service'
+include 'discovery-service'

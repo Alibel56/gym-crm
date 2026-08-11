@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: workload-service
+
+server:
+  port: ${SERVER_PORT:8081}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:VGhpc0lzQURldmVsb3BtZW50T25seVNlY3JldEtleUZvckd5bUNybUFwaQ==}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

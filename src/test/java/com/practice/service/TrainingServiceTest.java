@@ -13,6 +13,7 @@ import com.practice.entity.Trainer;
 import com.practice.entity.Training;
 import com.practice.entity.TrainingType;
 import com.practice.entity.User;
+import com.practice.integration.workload.WorkloadClient;
 import com.practice.mapper.request.CreateTrainingRequestMapper;
 import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
 import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
@@ -68,6 +69,9 @@ class TrainingServiceTest {
     @Mock
     private GymMetrics gymMetrics;
 
+    @Mock
+    private WorkloadClient workloadClient;
+
     private TrainingService trainingService;
 
     @BeforeEach
@@ -78,6 +82,7 @@ class TrainingServiceTest {
         trainingService.setTrainerRepository(trainerRepository);
         trainingService.setTraineeRepository(traineeRepository);
         trainingService.setGymMetrics(gymMetrics);
+        trainingService.setWorkloadClient(workloadClient);
         trainingService.setCreateTrainingRequestMapper(
                 createTrainingRequestMapper
         );

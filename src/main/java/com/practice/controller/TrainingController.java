@@ -23,7 +23,7 @@ public class TrainingController {
 
     @Operation(
             summary = "Add training",
-            description = "Creates a new training. Trainings cannot be updated or deleted via the REST API."
+            description = "Creates a new training. Trainings cannot be updated via the REST API."
     )
     @PostMapping
     public ResponseEntity<Void> addTraining(
@@ -31,5 +31,15 @@ public class TrainingController {
 
         trainingService.create(request);
         return ResponseEntity.ok().build();
+    }
+
+    @Operation(
+            summary = "Cancel training",
+            description = "Deletes (cancels) a planned training and notifies the workload service."
+    )
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> cancelTraining(@PathVariable Long id) {
+        trainingService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

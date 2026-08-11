@@ -9,6 +9,24 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/discovery-service" />
+            <option value="$PROJECT_DIR$/workload-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/discovery-service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/discovery-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/workload-service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/workload-service" />
           </set>
         </option>
       </GradleProjectSettings>

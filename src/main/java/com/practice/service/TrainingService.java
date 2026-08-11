@@ -11,6 +11,8 @@ import com.practice.dto.response.GetTrainerTrainingsListResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.Training;
+import com.practice.integration.workload.WorkloadActionType;
+import com.practice.integration.workload.WorkloadClient;
 import com.practice.mapper.request.CreateTrainingRequestMapper;
 import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
 import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
@@ -40,6 +42,7 @@ public class TrainingService {
     private TrainerRepository trainerRepository;
     private TraineeRepository traineeRepository;
     private GymMetrics gymMetrics;
+    private WorkloadClient workloadClient;
 
     private CreateTrainingRequestMapper createTrainingRequestMapper;
     private GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper;
@@ -66,6 +69,12 @@ public class TrainingService {
     @Autowired
     public void setGymMetrics(GymMetrics gymMetrics) {
         this.gymMetrics = gymMetrics;
+    }
+
+
+    @Autowired
+    public void setWorkloadClient(WorkloadClient workloadClient) {
+        this.workloadClient = workloadClient;
     }
 
     @Autowired
@@ -112,8 +121,20 @@ public class TrainingService {
         trainingCreate.setTrainee(trainee);
 
         Training saved = trainingRepository.save(trainingCreate);
+        workloadClient.updateWorkload(saved, WorkloadActionType.ADD);
         gymMetrics.stopTrainingCreationTimer(timerSample);
         log.info("Created training trainee={} trainer={}", request.traineeUserName(), request.trainerUserName());
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Training training = trainingRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Training not found: " + id));
+
+        trainingRepository.delete(training);
+        workloadClient.updateWorkload(training, WorkloadActionType.DELETE);
+        log.info("Deleted training id={} trainee={} trainer={}",
+                id, training.getTrainee().getUser().getUserName(), training.getTrainer().getUser().getUserName());
     }
 
     public Optional<Training> findById(Long id) {

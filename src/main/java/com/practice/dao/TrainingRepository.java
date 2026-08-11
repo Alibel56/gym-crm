@@ -8,6 +8,7 @@ import java.util.Optional;
 
 public interface TrainingRepository {
     Training save(Training training);
+    void delete(Training training);
     Optional<Training> findById(Long id);
     List<Training> findAllTrainerTrainingsByCriteria(String username, Criteria criteria);
     List<Training> findAllTraineeTrainingsByCriteria(String username, Criteria criteria);

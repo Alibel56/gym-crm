@@ -10,6 +10,7 @@ import com.practice.dto.response.UpdateTraineeProfileResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.User;
+import com.practice.integration.workload.WorkloadClient;
 import com.practice.mapper.request.TraineeRegistrationRequestMapper;
 import com.practice.mapper.response.GetTraineeProfileResponseMapper;
 import com.practice.mapper.response.TrainerSummaryResponseMapper;
@@ -47,6 +48,9 @@ class TraineeServiceTest {
     private GymMetrics gymMetrics;
 
     @Mock
+    private WorkloadClient workloadClient;
+
+    @Mock
     private TraineeRegistrationRequestMapper registrationRequestMapper;
 
     @Mock
@@ -68,6 +72,7 @@ class TraineeServiceTest {
         traineeService.setTraineeRepository(traineeRepository);
         traineeService.setTrainerRepository(trainerRepository);
         traineeService.setGymMetrics(gymMetrics);
+        traineeService.setWorkloadClient(workloadClient);
         traineeService.setTraineeRegistrationRequestMapper(registrationRequestMapper);
         traineeService.setUpdateTraineeProfileResponseMapper(updateResponseMapper);
         traineeService.setGetTraineeProfileResponseMapper(getProfileResponseMapper);
@@ -177,6 +182,9 @@ class TraineeServiceTest {
         UsernameRequest request = mock(UsernameRequest.class);
 
         when(request.userName()).thenReturn("john");
+        Trainee trainee = new Trainee();
+        trainee.setTrainings(new ArrayList<>());
+        when(traineeRepository.findByUsername("john")).thenReturn(Optional.of(trainee));
         when(traineeRepository.delete("john")).thenReturn(true);
 
         traineeService.delete(request);
@@ -189,7 +197,7 @@ class TraineeServiceTest {
         UsernameRequest request = mock(UsernameRequest.class);
 
         when(request.userName()).thenReturn("unknown");
-        when(traineeRepository.delete("unknown")).thenReturn(false);
+        when(traineeRepository.findByUsername("unknown")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> traineeService.delete(request))
                 .isInstanceOf(EntityNotFoundException.class)

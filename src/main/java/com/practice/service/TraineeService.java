@@ -12,6 +12,8 @@ import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.User;
 import com.practice.exception.AuthenticationException;
+import com.practice.integration.workload.WorkloadActionType;
+import com.practice.integration.workload.WorkloadClient;
 import com.practice.mapper.request.TraineeRegistrationRequestMapper;
 import com.practice.mapper.response.GetTraineeProfileResponseMapper;
 import com.practice.mapper.response.TraineeRegistrationResponseMapper;
@@ -40,6 +42,7 @@ public class TraineeService {
     private TraineeRepository traineeRepository;
     private TrainerRepository trainerRepository;
     private GymMetrics gymMetrics;
+    private WorkloadClient workloadClient;
 
     private TraineeRegistrationRequestMapper traineeRegistrationRequestMapper;
     private TraineeRegistrationResponseMapper registrationResponseMapper;
@@ -65,6 +68,12 @@ public class TraineeService {
     @Autowired
     public void setGymMetrics(GymMetrics gymMetrics) {
         this.gymMetrics = gymMetrics;
+    }
+
+
+    @Autowired
+    public void setWorkloadClient(WorkloadClient workloadClient) {
+        this.workloadClient = workloadClient;
     }
 
     @Autowired
@@ -134,12 +143,22 @@ public class TraineeService {
 
     @Transactional
     public void delete(UsernameRequest request) {
+        Trainee trainee = traineeRepository.findByUsername(request.userName())
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Trainee " + request.userName() + " not found"));
+
+        var trainingsToDelete = new ArrayList<>(trainee.getTrainings());
+
         if (!traineeRepository.delete(request.userName())) {
             throw new EntityNotFoundException(
                     "Trainee " + request.userName() + " not found");
         }
 
-        log.info("Deleted trainee username={}", request.userName());
+        trainingsToDelete.forEach(training ->
+                workloadClient.updateWorkload(training, WorkloadActionType.DELETE));
+
+        log.info("Deleted trainee username={} and {} associated trainings",
+                request.userName(), trainingsToDelete.size());
     }
 
     public Optional<Trainee> findById(Long id) {

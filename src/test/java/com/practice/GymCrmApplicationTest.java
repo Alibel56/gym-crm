@@ -4,8 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class GymCrmApplicationTest {
-
+public class GymCrmApplicationTest {
     @Test
     void contextLoads() {
     }
