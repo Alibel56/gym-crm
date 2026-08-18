@@ -11,13 +11,14 @@ import com.practice.dto.response.GetTrainerTrainingsListResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.Training;
-import com.practice.integration.workload.WorkloadActionType;
-import com.practice.integration.workload.WorkloadClient;
 import com.practice.mapper.request.CreateTrainingRequestMapper;
 import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
 import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
 import com.practice.mapper.response.GetTraineeTrainingsListResponseMapper;
 import com.practice.mapper.response.GetTrainerTrainingsListResponseMapper;
+import com.practice.messaging.TrainingWorkloadEvent;
+import com.practice.messaging.TrainingWorkloadEventPublisher;
+import com.practice.messaging.WorkloadActionType;
 import com.practice.metrics.GymMetrics;
 import com.practice.utility.Criteria;
 import io.micrometer.core.instrument.Timer;
@@ -36,20 +37,20 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class TrainingService {
 
-    private static final Logger log = LoggerFactory.getLogger(TrainingService.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(TrainingService.class);
 
     private TrainingRepository trainingRepository;
     private TrainerRepository trainerRepository;
     private TraineeRepository traineeRepository;
     private GymMetrics gymMetrics;
-    private WorkloadClient workloadClient;
+    private TrainingWorkloadEventPublisher workloadEventPublisher;
 
     private CreateTrainingRequestMapper createTrainingRequestMapper;
     private GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper;
     private GetTraineeTrainingsListRequestMapper getTraineeTrainingsListRequestMapper;
     private GetTraineeTrainingsListResponseMapper getTraineeTrainingsListResponseMapper;
     private GetTrainerTrainingsListResponseMapper getTrainerTrainingsListResponseMapper;
-
 
     @Autowired
     public void setTrainingRepository(TrainingRepository trainingRepository) {
@@ -71,70 +72,135 @@ public class TrainingService {
         this.gymMetrics = gymMetrics;
     }
 
-
     @Autowired
-    public void setWorkloadClient(WorkloadClient workloadClient) {
-        this.workloadClient = workloadClient;
+    public void setWorkloadEventPublisher(
+            TrainingWorkloadEventPublisher workloadEventPublisher) {
+        this.workloadEventPublisher = workloadEventPublisher;
     }
 
     @Autowired
-    public void setCreateTrainingRequestMapper(CreateTrainingRequestMapper createTrainingRequestMapper) {
+    public void setCreateTrainingRequestMapper(
+            CreateTrainingRequestMapper createTrainingRequestMapper) {
         this.createTrainingRequestMapper = createTrainingRequestMapper;
     }
 
     @Autowired
-    public void setGetTrainerTrainingsListRequestMapper(GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper) {
-        this.getTrainerTrainingsListRequestMapper = getTrainerTrainingsListRequestMapper;
+    public void setGetTrainerTrainingsListRequestMapper(
+            GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper) {
+        this.getTrainerTrainingsListRequestMapper =
+                getTrainerTrainingsListRequestMapper;
     }
 
     @Autowired
-    public void setGetTraineeTrainingsListRequestMapper(GetTraineeTrainingsListRequestMapper getTraineeTrainingsListRequestMapper) {
-        this.getTraineeTrainingsListRequestMapper = getTraineeTrainingsListRequestMapper;
+    public void setGetTraineeTrainingsListRequestMapper(
+            GetTraineeTrainingsListRequestMapper getTraineeTrainingsListRequestMapper) {
+        this.getTraineeTrainingsListRequestMapper =
+                getTraineeTrainingsListRequestMapper;
     }
 
     @Autowired
-    public void setGetTraineeTrainingsListResponseMapper(GetTraineeTrainingsListResponseMapper getTraineeTrainingsListResponseMapper) {
-        this.getTraineeTrainingsListResponseMapper = getTraineeTrainingsListResponseMapper;
+    public void setGetTraineeTrainingsListResponseMapper(
+            GetTraineeTrainingsListResponseMapper getTraineeTrainingsListResponseMapper) {
+        this.getTraineeTrainingsListResponseMapper =
+                getTraineeTrainingsListResponseMapper;
     }
 
     @Autowired
-    public void setGetTrainerTrainingsListResponseMapper(GetTrainerTrainingsListResponseMapper getTrainerTrainingsListResponseMapper) {
-        this.getTrainerTrainingsListResponseMapper = getTrainerTrainingsListResponseMapper;
+    public void setGetTrainerTrainingsListResponseMapper(
+            GetTrainerTrainingsListResponseMapper getTrainerTrainingsListResponseMapper) {
+        this.getTrainerTrainingsListResponseMapper =
+                getTrainerTrainingsListResponseMapper;
     }
 
     @Transactional
     public void create(CreateTrainingRequest request) {
 
-        Timer.Sample timerSample = gymMetrics.startTrainingCreationTimer();
+        Timer.Sample timerSample =
+                gymMetrics.startTrainingCreationTimer();
 
-        Training trainingCreate = createTrainingRequestMapper.mapFrom(request);
+        Training trainingCreate =
+                createTrainingRequestMapper.mapFrom(request);
 
-        Trainer trainer = trainerRepository.findByUsername(request.trainerUserName())
-                .orElseThrow(() -> new EntityNotFoundException("Trainer's username in new training not found"));
+        Trainer trainer = trainerRepository
+                .findByUsername(request.trainerUserName())
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Trainer's username in new training not found"));
 
         trainingCreate.setTrainer(trainer);
         trainingCreate.setTrainingType(trainer.getTrainingType());
 
-        Trainee trainee = traineeRepository.findByUsername(request.traineeUserName())
-                .orElseThrow(() -> new EntityNotFoundException("Trainee's username in new training not found"));
+        Trainee trainee = traineeRepository
+                .findByUsername(request.traineeUserName())
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Trainee's username in new training not found"));
 
         trainingCreate.setTrainee(trainee);
 
         Training saved = trainingRepository.save(trainingCreate);
-        workloadClient.updateWorkload(saved, WorkloadActionType.ADD);
+
+        publishWorkloadEvent(
+                saved,
+                WorkloadActionType.ADD
+        );
+
         gymMetrics.stopTrainingCreationTimer(timerSample);
-        log.info("Created training trainee={} trainer={}", request.traineeUserName(), request.trainerUserName());
+
+        log.info(
+                "Created training trainee={} trainer={}",
+                request.traineeUserName(),
+                request.trainerUserName()
+        );
     }
 
     @Transactional
     public void delete(Long id) {
+
         Training training = trainingRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Training not found: " + id));
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "Training not found: " + id));
 
         trainingRepository.delete(training);
-        workloadClient.updateWorkload(training, WorkloadActionType.DELETE);
-        log.info("Deleted training id={} trainee={} trainer={}",
-                id, training.getTrainee().getUser().getUserName(), training.getTrainer().getUser().getUserName());
+
+        publishWorkloadEvent(
+                training,
+                WorkloadActionType.DELETE
+        );
+
+        log.info(
+                "Deleted training id={} trainee={} trainer={}",
+                id,
+                training.getTrainee().getUser().getUserName(),
+                training.getTrainer().getUser().getUserName()
+        );
+    }
+
+    private void publishWorkloadEvent(
+            Training training,
+            WorkloadActionType actionType) {
+
+        var trainerUser = training.getTrainer().getUser();
+
+        TrainingWorkloadEvent event =
+                new TrainingWorkloadEvent(
+                        trainerUser.getUserName(),
+                        trainerUser.getFirstName(),
+                        trainerUser.getLastName(),
+                        trainerUser.getIsActive(),
+                        training.getTrainingDate(),
+                        training.getTrainingDuration(),
+                        actionType
+                );
+
+        workloadEventPublisher.publish(event);
+
+        log.debug(
+                "Published workload event: trainer={}, action={}",
+                trainerUser.getUserName(),
+                actionType
+        );
     }
 
     public Optional<Training> findById(Long id) {
@@ -145,18 +211,33 @@ public class TrainingService {
         return trainingRepository.findAll();
     }
 
-    public List<GetTraineeTrainingsListResponse> findAllTraineeTrainings(GetTraineeTrainingsListRequest request) {
-        Criteria criteria = getTraineeTrainingsListRequestMapper.mapFrom(request);
-        return trainingRepository.findAllTraineeTrainingsByCriteria(request.userName(), criteria).stream()
+    public List<GetTraineeTrainingsListResponse> findAllTraineeTrainings(
+            GetTraineeTrainingsListRequest request) {
+
+        Criteria criteria =
+                getTraineeTrainingsListRequestMapper.mapFrom(request);
+
+        return trainingRepository
+                .findAllTraineeTrainingsByCriteria(
+                        request.userName(),
+                        criteria)
+                .stream()
                 .map(getTraineeTrainingsListResponseMapper::mapFrom)
                 .collect(Collectors.toList());
     }
 
-    public List<GetTrainerTrainingsListResponse> findAllTrainerTrainings(GetTrainerTrainingsListRequest request) {
-        Criteria criteria = getTrainerTrainingsListRequestMapper.mapFrom(request);
-        return trainingRepository.findAllTrainerTrainingsByCriteria(request.userName(), criteria).stream()
+    public List<GetTrainerTrainingsListResponse> findAllTrainerTrainings(
+            GetTrainerTrainingsListRequest request) {
+
+        Criteria criteria =
+                getTrainerTrainingsListRequestMapper.mapFrom(request);
+
+        return trainingRepository
+                .findAllTrainerTrainingsByCriteria(
+                        request.userName(),
+                        criteria)
+                .stream()
                 .map(getTrainerTrainingsListResponseMapper::mapFrom)
                 .collect(Collectors.toList());
     }
-
 }

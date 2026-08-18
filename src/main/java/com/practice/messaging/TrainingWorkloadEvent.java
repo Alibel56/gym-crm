@@ -1,8 +1,8 @@
-package com.practice.integration.workload;
+package com.practice.messaging;
 
 import java.time.LocalDate;
 
-public record TrainerWorkloadRequest(
+public record TrainingWorkloadEvent(
         String trainerUsername,
         String trainerFirstName,
         String trainerLastName,

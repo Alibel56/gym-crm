@@ -1,4 +1,4 @@
-package com.practice.integration.workload;
+package com.practice.workloadservice.messaging;
 
 public enum WorkloadActionType {
     ADD,

@@ -10,10 +10,7 @@ import com.practice.dto.response.TrainerSummaryResponse;
 import com.practice.dto.response.UpdateTraineeProfileResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
-import com.practice.entity.User;
-import com.practice.exception.AuthenticationException;
-import com.practice.integration.workload.WorkloadActionType;
-import com.practice.integration.workload.WorkloadClient;
+import com.practice.entity.Training;
 import com.practice.mapper.request.TraineeRegistrationRequestMapper;
 import com.practice.mapper.response.GetTraineeProfileResponseMapper;
 import com.practice.mapper.response.TraineeRegistrationResponseMapper;
@@ -21,7 +18,9 @@ import com.practice.mapper.response.TrainerSummaryResponseMapper;
 import com.practice.mapper.response.UpdateTraineeProfileResponseMapper;
 import com.practice.metrics.GymMetrics;
 import com.practice.utility.Credentials;
-import com.practice.utility.ServiceUtility;
+import com.practice.messaging.TrainingWorkloadEvent;
+import com.practice.messaging.TrainingWorkloadEventPublisher;
+import com.practice.messaging.WorkloadActionType;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +41,7 @@ public class TraineeService {
     private TraineeRepository traineeRepository;
     private TrainerRepository trainerRepository;
     private GymMetrics gymMetrics;
-    private WorkloadClient workloadClient;
+    private TrainingWorkloadEventPublisher workloadEventPublisher;
 
     private TraineeRegistrationRequestMapper traineeRegistrationRequestMapper;
     private TraineeRegistrationResponseMapper registrationResponseMapper;
@@ -72,8 +71,9 @@ public class TraineeService {
 
 
     @Autowired
-    public void setWorkloadClient(WorkloadClient workloadClient) {
-        this.workloadClient = workloadClient;
+    public void setWorkloadEventPublisher(
+            TrainingWorkloadEventPublisher workloadEventPublisher) {
+        this.workloadEventPublisher = workloadEventPublisher;
     }
 
     @Autowired
@@ -155,10 +155,13 @@ public class TraineeService {
         }
 
         trainingsToDelete.forEach(training ->
-                workloadClient.updateWorkload(training, WorkloadActionType.DELETE));
+                publishWorkloadEvent(training, WorkloadActionType.DELETE));
 
-        log.info("Deleted trainee username={} and {} associated trainings",
-                request.userName(), trainingsToDelete.size());
+        log.info(
+                "Deleted trainee username={} and {} associated trainings",
+                request.userName(),
+                trainingsToDelete.size()
+        );
     }
 
     public Optional<Trainee> findById(Long id) {
@@ -210,4 +213,29 @@ public class TraineeService {
                 .toList();
     }
 
+    private void publishWorkloadEvent(
+            Training training,
+            WorkloadActionType actionType) {
+
+        var trainerUser = training.getTrainer().getUser();
+
+        TrainingWorkloadEvent event =
+                new TrainingWorkloadEvent(
+                        trainerUser.getUserName(),
+                        trainerUser.getFirstName(),
+                        trainerUser.getLastName(),
+                        trainerUser.getIsActive(),
+                        training.getTrainingDate(),
+                        training.getTrainingDuration(),
+                        actionType
+                );
+
+        workloadEventPublisher.publish(event);
+
+        log.debug(
+                "Published workload event: trainer={}, action={}",
+                trainerUser.getUserName(),
+                actionType
+        );
+    }
 }

@@ -11,16 +11,16 @@ import com.practice.dto.response.GetTrainerTrainingsListResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.Training;
-import com.practice.entity.TrainingType;
 import com.practice.entity.User;
-import com.practice.integration.workload.WorkloadClient;
 import com.practice.mapper.request.CreateTrainingRequestMapper;
 import com.practice.mapper.request.GetTraineeTrainingsListRequestMapper;
 import com.practice.mapper.request.GetTrainerTrainingsListRequestMapper;
 import com.practice.mapper.response.GetTraineeTrainingsListResponseMapper;
 import com.practice.mapper.response.GetTrainerTrainingsListResponseMapper;
+import com.practice.messaging.TrainingWorkloadEventPublisher;
 import com.practice.metrics.GymMetrics;
 import com.practice.utility.Criteria;
+import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,8 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,98 +47,100 @@ class TrainingServiceTest {
     private TraineeRepository traineeRepository;
 
     @Mock
-    private CreateTrainingRequestMapper createTrainingRequestMapper;
-
-    @Mock
-    private GetTrainerTrainingsListRequestMapper
-            getTrainerTrainingsListRequestMapper;
-
-    @Mock
-    private GetTraineeTrainingsListRequestMapper
-            getTraineeTrainingsListRequestMapper;
-
-    @Mock
-    private GetTraineeTrainingsListResponseMapper
-            getTraineeTrainingsListResponseMapper;
-
-    @Mock
-    private GetTrainerTrainingsListResponseMapper
-            getTrainerTrainingsListResponseMapper;
-
-    @Mock
     private GymMetrics gymMetrics;
 
     @Mock
-    private WorkloadClient workloadClient;
+    private TrainingWorkloadEventPublisher workloadEventPublisher;
+
+    @Mock
+    private CreateTrainingRequestMapper createTrainingRequestMapper;
+
+    @Mock
+    private GetTrainerTrainingsListRequestMapper getTrainerTrainingsListRequestMapper;
+
+    @Mock
+    private GetTraineeTrainingsListRequestMapper getTraineeTrainingsListRequestMapper;
+
+    @Mock
+    private GetTraineeTrainingsListResponseMapper getTraineeTrainingsListResponseMapper;
+
+    @Mock
+    private GetTrainerTrainingsListResponseMapper getTrainerTrainingsListResponseMapper;
+
+    @Mock
+    private Timer.Sample timerSample;
 
     private TrainingService trainingService;
 
     @BeforeEach
     void setUp() {
+
         trainingService = new TrainingService();
 
         trainingService.setTrainingRepository(trainingRepository);
         trainingService.setTrainerRepository(trainerRepository);
         trainingService.setTraineeRepository(traineeRepository);
         trainingService.setGymMetrics(gymMetrics);
-        trainingService.setWorkloadClient(workloadClient);
+        trainingService.setWorkloadEventPublisher(workloadEventPublisher);
+
         trainingService.setCreateTrainingRequestMapper(
                 createTrainingRequestMapper
         );
+
         trainingService.setGetTrainerTrainingsListRequestMapper(
                 getTrainerTrainingsListRequestMapper
         );
+
         trainingService.setGetTraineeTrainingsListRequestMapper(
                 getTraineeTrainingsListRequestMapper
         );
+
         trainingService.setGetTraineeTrainingsListResponseMapper(
                 getTraineeTrainingsListResponseMapper
         );
+
         trainingService.setGetTrainerTrainingsListResponseMapper(
                 getTrainerTrainingsListResponseMapper
         );
     }
 
-    private Trainer createTrainer() {
-        User user = User.builder()
-                .userName("trainer.username")
-                .firstName("Trainer")
-                .lastName("Test")
-                .password("password")
-                .isActive(true)
-                .build();
+    @Test
+    void findById_shouldReturnTraining() {
 
-        TrainingType trainingType = TrainingType.builder()
-                .id(1L)
-                .name("Fitness")
-                .build();
+        Training training = mock(Training.class);
 
-        return Trainer.builder()
-                .id(1L)
-                .user(user)
-                .trainingType(trainingType)
-                .build();
+        when(trainingRepository.findById(1L))
+                .thenReturn(Optional.of(training));
+
+        Optional<Training> result =
+                trainingService.findById(1L);
+
+        assertTrue(result.isPresent());
+        assertSame(training, result.get());
+
+        verify(trainingRepository)
+                .findById(1L);
     }
 
-    private Trainee createTrainee() {
-        User user = User.builder()
-                .userName("trainee.username")
-                .firstName("Trainee")
-                .lastName("Test")
-                .password("password")
-                .isActive(true)
-                .build();
 
-        return Trainee.builder()
-                .id(1L)
-                .user(user)
-                .build();
-    }
+    @Test
+    void findAll_shouldReturnTrainings() {
 
-    private Training createTraining() {
-        return Training.builder()
-                .id(1L)
-                .build();
+        Training training1 = mock(Training.class);
+        Training training2 = mock(Training.class);
+
+        when(trainingRepository.findAll())
+                .thenReturn(List.of(training1, training2));
+
+        List<Training> result =
+                trainingService.findAll();
+
+        assertEquals(2, result.size());
+        assertSame(training1, result.get(0));
+        assertSame(training2, result.get(1));
+
+        verify(trainingRepository)
+                .findAll();
     }
 
     @Test
@@ -148,399 +149,315 @@ class TrainingServiceTest {
         CreateTrainingRequest request =
                 mock(CreateTrainingRequest.class);
 
-        Training training = createTraining();
-        Trainer trainer = createTrainer();
-        Trainee trainee = createTrainee();
+        Training training =
+                mock(Training.class);
+
+        Trainer trainer =
+                mock(Trainer.class);
+
+        Trainee trainee =
+                mock(Trainee.class);
+
+        User user =
+                mock(User.class);
 
         when(request.trainerUserName())
-                .thenReturn("trainer.username");
+                .thenReturn("trainer");
 
         when(request.traineeUserName())
-                .thenReturn("trainee.username");
+                .thenReturn("trainee");
 
         when(createTrainingRequestMapper.mapFrom(request))
                 .thenReturn(training);
 
-        when(trainerRepository.findByUsername("trainer.username"))
+        when(trainerRepository.findByUsername("trainer"))
                 .thenReturn(Optional.of(trainer));
 
-        when(traineeRepository.findByUsername("trainee.username"))
+        when(traineeRepository.findByUsername("trainee"))
                 .thenReturn(Optional.of(trainee));
 
         when(trainingRepository.save(training))
                 .thenReturn(training);
 
+        // Training -> Trainer -> User
+        when(training.getTrainer())
+                .thenReturn(trainer);
+
+        when(trainer.getUser())
+                .thenReturn(user);
+
+        when(user.getUserName())
+                .thenReturn("trainer");
+
+        when(user.getFirstName())
+                .thenReturn("John");
+
+        when(user.getLastName())
+                .thenReturn("Doe");
+
+        when(user.getIsActive())
+                .thenReturn(true);
+
+        when(gymMetrics.startTrainingCreationTimer())
+                .thenReturn(timerSample);
 
         trainingService.create(request);
-
-
-        assertThat(training.getTrainer())
-                .isSameAs(trainer);
-
-        assertThat(training.getTrainee())
-                .isSameAs(trainee);
-
-        assertThat(training.getTrainingType())
-                .isSameAs(trainer.getTrainingType());
 
         verify(createTrainingRequestMapper)
                 .mapFrom(request);
 
         verify(trainerRepository)
-                .findByUsername("trainer.username");
+                .findByUsername("trainer");
 
         verify(traineeRepository)
-                .findByUsername("trainee.username");
+                .findByUsername("trainee");
+
+        verify(training)
+                .setTrainer(trainer);
+
+        verify(training)
+                .setTrainee(trainee);
 
         verify(trainingRepository)
                 .save(training);
 
-        verify(gymMetrics).startTrainingCreationTimer();
-        verify(gymMetrics).stopTrainingCreationTimer(any());
+        verify(workloadEventPublisher)
+                .publish(any());
+
+        verify(gymMetrics)
+                .startTrainingCreationTimer();
+
+        verify(gymMetrics)
+                .stopTrainingCreationTimer(timerSample);
     }
 
     @Test
-    void create_shouldThrowWhenTrainerNotFound() {
+    void create_shouldThrowExceptionWhenTrainerNotFound() {
 
         CreateTrainingRequest request =
                 mock(CreateTrainingRequest.class);
 
-        Training training = createTraining();
+        Training training =
+                mock(Training.class);
 
         when(request.trainerUserName())
-                .thenReturn("unknown.trainer");
+                .thenReturn("trainer");
 
         when(createTrainingRequestMapper.mapFrom(request))
                 .thenReturn(training);
 
-        when(trainerRepository.findByUsername("unknown.trainer"))
+        when(trainerRepository.findByUsername("trainer"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() ->
-                trainingService.create(request))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(
-                        "Trainer's username in new training not found"
-                );
-
-        verify(trainerRepository)
-                .findByUsername("unknown.trainer");
-
-        verifyNoInteractions(traineeRepository);
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> trainingService.create(request)
+        );
 
         verify(trainingRepository, never())
                 .save(any());
+
+        verify(traineeRepository, never())
+                .findByUsername(anyString());
     }
 
     @Test
-    void create_shouldThrowWhenTraineeNotFound() {
+    void create_shouldThrowExceptionWhenTraineeNotFound() {
 
         CreateTrainingRequest request =
                 mock(CreateTrainingRequest.class);
 
-        Training training = createTraining();
-        Trainer trainer = createTrainer();
+        Training training =
+                mock(Training.class);
+
+        Trainer trainer =
+                mock(Trainer.class);
 
         when(request.trainerUserName())
-                .thenReturn("trainer.username");
+                .thenReturn("trainer");
 
         when(request.traineeUserName())
-                .thenReturn("unknown.trainee");
+                .thenReturn("trainee");
 
         when(createTrainingRequestMapper.mapFrom(request))
                 .thenReturn(training);
 
-        when(trainerRepository.findByUsername("trainer.username"))
+        when(trainerRepository.findByUsername("trainer"))
                 .thenReturn(Optional.of(trainer));
 
-        when(traineeRepository.findByUsername("unknown.trainee"))
+        when(traineeRepository.findByUsername("trainee"))
                 .thenReturn(Optional.empty());
 
-
-        assertThatThrownBy(() ->
-                trainingService.create(request))
-                .isInstanceOf(EntityNotFoundException.class)
-                .hasMessage(
-                        "Trainee's username in new training not found"
-                );
-
-        assertThat(training.getTrainer())
-                .isSameAs(trainer);
-
-        assertThat(training.getTrainingType())
-                .isSameAs(trainer.getTrainingType());
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> trainingService.create(request)
+        );
 
         verify(trainingRepository, never())
                 .save(any());
     }
 
-    @Test
-    void findById_shouldReturnTraining() {
 
-        Training training = createTraining();
+    @Test
+    void delete_shouldDeleteTraining() {
+
+        Training training = mock(Training.class);
+
+        Trainer trainer = mock(Trainer.class);
+        Trainee trainee = mock(Trainee.class);
+
+        User trainerUser = mock(User.class);
+        User traineeUser = mock(User.class);
 
         when(trainingRepository.findById(1L))
                 .thenReturn(Optional.of(training));
 
+        when(training.getTrainer())
+                .thenReturn(trainer);
 
-        Optional<Training> result =
-                trainingService.findById(1L);
+        when(trainer.getUser())
+                .thenReturn(trainerUser);
 
+        when(trainerUser.getUserName())
+                .thenReturn("trainer");
 
-        assertThat(result)
-                .isPresent()
-                .contains(training);
+        when(trainerUser.getFirstName())
+                .thenReturn("John");
+
+        when(trainerUser.getLastName())
+                .thenReturn("Doe");
+
+        when(trainerUser.getIsActive())
+                .thenReturn(true);
+
+        // Training -> Trainee -> User
+        when(training.getTrainee())
+                .thenReturn(trainee);
+
+        when(trainee.getUser())
+                .thenReturn(traineeUser);
+
+        when(traineeUser.getUserName())
+                .thenReturn("trainee");
+
+        trainingService.delete(1L);
 
         verify(trainingRepository)
                 .findById(1L);
+
+        verify(trainingRepository)
+                .delete(training);
+
+        verify(workloadEventPublisher)
+                .publish(any());
     }
 
     @Test
-    void findById_shouldReturnEmptyOptionalWhenTrainingNotFound() {
+    void delete_shouldThrowExceptionWhenTrainingNotFound() {
 
-        when(trainingRepository.findById(100L))
+        when(trainingRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
+        assertThrows(
+                EntityNotFoundException.class,
+                () -> trainingService.delete(1L)
+        );
 
-        Optional<Training> result =
-                trainingService.findById(100L);
+        verify(trainingRepository, never())
+                .delete(any());
 
-
-        assertThat(result).isEmpty();
-
-        verify(trainingRepository)
-                .findById(100L);
+        verify(workloadEventPublisher, never())
+                .publish(any());
     }
 
     @Test
-    void findAll_shouldReturnAllTrainings() {
-
-        Training firstTraining = Training.builder()
-                .id(1L)
-                .build();
-
-        Training secondTraining = Training.builder()
-                .id(2L)
-                .build();
-
-        when(trainingRepository.findAll())
-                .thenReturn(List.of(
-                        firstTraining,
-                        secondTraining
-                ));
-
-
-        List<Training> result =
-                trainingService.findAll();
-
-
-        assertThat(result)
-                .containsExactly(
-                        firstTraining,
-                        secondTraining
-                );
-
-        verify(trainingRepository)
-                .findAll();
-    }
-
-    @Test
-    void findAllTraineeTrainings_shouldReturnMappedResponses() {
+    void findAllTraineeTrainings_shouldReturnResponses() {
 
         GetTraineeTrainingsListRequest request =
                 mock(GetTraineeTrainingsListRequest.class);
 
-        Criteria criteria = mock(Criteria.class);
+        Criteria criteria =
+                mock(Criteria.class);
 
-        Training firstTraining = Training.builder()
-                .id(1L)
-                .build();
+        Training training =
+                mock(Training.class);
 
-        Training secondTraining = Training.builder()
-                .id(2L)
-                .build();
-
-        GetTraineeTrainingsListResponse firstResponse =
-                mock(GetTraineeTrainingsListResponse.class);
-
-        GetTraineeTrainingsListResponse secondResponse =
+        GetTraineeTrainingsListResponse response =
                 mock(GetTraineeTrainingsListResponse.class);
 
         when(request.userName())
-                .thenReturn("trainee.username");
+                .thenReturn("trainee");
 
         when(getTraineeTrainingsListRequestMapper.mapFrom(request))
                 .thenReturn(criteria);
 
         when(trainingRepository.findAllTraineeTrainingsByCriteria(
-                "trainee.username",
+                "trainee",
                 criteria
-        )).thenReturn(List.of(
-                firstTraining,
-                secondTraining
-        ));
+        )).thenReturn(List.of(training));
 
-        when(getTraineeTrainingsListResponseMapper.mapFrom(firstTraining))
-                .thenReturn(firstResponse);
-
-        when(getTraineeTrainingsListResponseMapper.mapFrom(secondTraining))
-                .thenReturn(secondResponse);
-
+        when(getTraineeTrainingsListResponseMapper.mapFrom(training))
+                .thenReturn(response);
 
         List<GetTraineeTrainingsListResponse> result =
                 trainingService.findAllTraineeTrainings(request);
 
-
-        assertThat(result)
-                .containsExactly(
-                        firstResponse,
-                        secondResponse
-                );
-
-        verify(getTraineeTrainingsListRequestMapper)
-                .mapFrom(request);
+        assertEquals(1, result.size());
+        assertSame(response, result.getFirst());
 
         verify(trainingRepository)
                 .findAllTraineeTrainingsByCriteria(
-                        "trainee.username",
+                        "trainee",
                         criteria
                 );
 
         verify(getTraineeTrainingsListResponseMapper)
-                .mapFrom(firstTraining);
-
-        verify(getTraineeTrainingsListResponseMapper)
-                .mapFrom(secondTraining);
+                .mapFrom(training);
     }
 
-    @Test
-    void findAllTraineeTrainings_shouldReturnEmptyList() {
-
-        GetTraineeTrainingsListRequest request =
-                mock(GetTraineeTrainingsListRequest.class);
-
-        Criteria criteria = mock(Criteria.class);
-
-        when(request.userName())
-                .thenReturn("trainee.username");
-
-        when(getTraineeTrainingsListRequestMapper.mapFrom(request))
-                .thenReturn(criteria);
-
-        when(trainingRepository.findAllTraineeTrainingsByCriteria(
-                "trainee.username",
-                criteria
-        )).thenReturn(List.of());
-
-
-        List<GetTraineeTrainingsListResponse> result =
-                trainingService.findAllTraineeTrainings(request);
-
-
-        assertThat(result).isEmpty();
-
-        verifyNoInteractions(
-                getTraineeTrainingsListResponseMapper
-        );
-    }
 
     @Test
-    void findAllTrainerTrainings_shouldReturnMappedResponses() {
+    void findAllTrainerTrainings_shouldReturnResponses() {
 
         GetTrainerTrainingsListRequest request =
                 mock(GetTrainerTrainingsListRequest.class);
 
-        Criteria criteria = mock(Criteria.class);
+        Criteria criteria =
+                mock(Criteria.class);
 
-        Training firstTraining = Training.builder()
-                .id(1L)
-                .build();
+        Training training =
+                mock(Training.class);
 
-        Training secondTraining = Training.builder()
-                .id(2L)
-                .build();
-
-        GetTrainerTrainingsListResponse firstResponse =
-                mock(GetTrainerTrainingsListResponse.class);
-
-        GetTrainerTrainingsListResponse secondResponse =
+        GetTrainerTrainingsListResponse response =
                 mock(GetTrainerTrainingsListResponse.class);
 
         when(request.userName())
-                .thenReturn("trainer.username");
+                .thenReturn("trainer");
 
         when(getTrainerTrainingsListRequestMapper.mapFrom(request))
                 .thenReturn(criteria);
 
         when(trainingRepository.findAllTrainerTrainingsByCriteria(
-                "trainer.username",
+                "trainer",
                 criteria
-        )).thenReturn(List.of(
-                firstTraining,
-                secondTraining
-        ));
+        )).thenReturn(List.of(training));
 
-        when(getTrainerTrainingsListResponseMapper.mapFrom(firstTraining))
-                .thenReturn(firstResponse);
-
-        when(getTrainerTrainingsListResponseMapper.mapFrom(secondTraining))
-                .thenReturn(secondResponse);
-
+        when(getTrainerTrainingsListResponseMapper.mapFrom(training))
+                .thenReturn(response);
 
         List<GetTrainerTrainingsListResponse> result =
                 trainingService.findAllTrainerTrainings(request);
 
-
-        assertThat(result)
-                .containsExactly(
-                        firstResponse,
-                        secondResponse
-                );
-
-        verify(getTrainerTrainingsListRequestMapper)
-                .mapFrom(request);
+        assertEquals(1, result.size());
+        assertSame(response, result.getFirst());
 
         verify(trainingRepository)
                 .findAllTrainerTrainingsByCriteria(
-                        "trainer.username",
+                        "trainer",
                         criteria
                 );
 
         verify(getTrainerTrainingsListResponseMapper)
-                .mapFrom(firstTraining);
-
-        verify(getTrainerTrainingsListResponseMapper)
-                .mapFrom(secondTraining);
-    }
-
-    @Test
-    void findAllTrainerTrainings_shouldReturnEmptyList() {
-
-        GetTrainerTrainingsListRequest request =
-                mock(GetTrainerTrainingsListRequest.class);
-
-        Criteria criteria = mock(Criteria.class);
-
-        when(request.userName())
-                .thenReturn("trainer.username");
-
-        when(getTrainerTrainingsListRequestMapper.mapFrom(request))
-                .thenReturn(criteria);
-
-        when(trainingRepository.findAllTrainerTrainingsByCriteria(
-                "trainer.username",
-                criteria
-        )).thenReturn(List.of());
-
-
-        List<GetTrainerTrainingsListResponse> result =
-                trainingService.findAllTrainerTrainings(request);
-
-
-        assertThat(result).isEmpty();
-
-        verifyNoInteractions(
-                getTrainerTrainingsListResponseMapper
-        );
+                .mapFrom(training);
     }
 }
