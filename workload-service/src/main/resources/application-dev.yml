@@ -1,0 +1,3 @@
+jms:
+  queue:
+    training-workload: ${JMS_TRAINING_WORKLOAD_QUEUE:training-workload-dev}

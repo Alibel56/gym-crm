@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class JmsConfigTest {
 
     @Test
-    void shouldHaveCorrectTrainingWorkloadQueueName() {
+    void shouldExposePlaceholderForTrainingWorkloadQueueProperty() {
         assertEquals(
-                "training-workload",
-                JmsConfig.TRAINING_WORKLOAD_QUEUE
+                "${jms.queue.training-workload}",
+                JmsConfig.TRAINING_WORKLOAD_QUEUE_PROPERTY
         );
     }
 }

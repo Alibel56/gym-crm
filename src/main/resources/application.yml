@@ -17,6 +17,10 @@ spring:
     user: ${ACTIVEMQ_USER:admin}
     password: ${ACTIVEMQ_PASSWORD:admin}
 
+jms:
+  queue:
+    training-workload: ${JMS_TRAINING_WORKLOAD_QUEUE:training-workload}
+
 server:
   port: ${SERVER_PORT:8080}
   servlet:

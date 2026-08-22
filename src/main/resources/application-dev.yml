@@ -16,3 +16,7 @@ logging:
     root: INFO
     com.practice: DEBUG
     org.hibernate.SQL: INFO
+
+jms:
+  queue:
+    training-workload: ${JMS_TRAINING_WORKLOAD_QUEUE:training-workload-dev}

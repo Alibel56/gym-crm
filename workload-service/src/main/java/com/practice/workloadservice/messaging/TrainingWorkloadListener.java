@@ -30,7 +30,8 @@ public class TrainingWorkloadListener {
     }
 
     @JmsListener(
-            destination = JmsConfig.TRAINING_WORKLOAD_QUEUE
+            destination = JmsConfig.TRAINING_WORKLOAD_QUEUE_PROPERTY,
+            concurrency = JmsConfig.TRAINING_WORKLOAD_CONCURRENCY_PROPERTY
     )
     public void receive(Message message) throws JMSException {
 

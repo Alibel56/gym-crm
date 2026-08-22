@@ -23,3 +23,7 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+
+jms:
+  queue:
+    training-workload: ${JMS_TRAINING_WORKLOAD_QUEUE:training-workload-prod}

@@ -2,10 +2,19 @@ spring:
   application:
     name: workload-service
 
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
   activemq:
     broker-url: ${ACTIVEMQ_URL:tcp://localhost:61616}
     user: ${ACTIVEMQ_USER:admin}
     password: ${ACTIVEMQ_PASSWORD:admin}
+
+jms:
+  queue:
+    training-workload: ${JMS_TRAINING_WORKLOAD_QUEUE:training-workload}
+  listener:
+    concurrency: ${JMS_LISTENER_CONCURRENCY:3-10}
 
 server:
   port: ${SERVER_PORT:8081}

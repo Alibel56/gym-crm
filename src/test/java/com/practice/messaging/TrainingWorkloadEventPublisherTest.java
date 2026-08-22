@@ -2,9 +2,9 @@ package com.practice.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jms.core.JmsTemplate;
@@ -17,6 +17,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TrainingWorkloadEventPublisherTest {
 
+    private static final String QUEUE_NAME = "training-workload-test";
+
     @Mock
     private JmsTemplate jmsTemplate;
 
@@ -26,8 +28,13 @@ class TrainingWorkloadEventPublisherTest {
     @Mock
     private TrainingWorkloadEvent event;
 
-    @InjectMocks
     private TrainingWorkloadEventPublisher publisher;
+
+    @BeforeEach
+    void setUp() {
+        publisher = new TrainingWorkloadEventPublisher(
+                jmsTemplate, objectMapper, QUEUE_NAME);
+    }
 
     @Test
     void publish_shouldSerializeAndSendMessage() throws Exception {
@@ -40,7 +47,7 @@ class TrainingWorkloadEventPublisherTest {
 
         verify(objectMapper).writeValueAsString(event);
         verify(jmsTemplate).convertAndSend(
-                JmsConfig.TRAINING_WORKLOAD_QUEUE,
+                QUEUE_NAME,
                 json
         );
     }
