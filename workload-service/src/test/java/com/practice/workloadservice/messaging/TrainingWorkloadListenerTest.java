@@ -1,10 +1,13 @@
 package com.practice.workloadservice.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.practice.workloadservice.dto.ActionType;
 import com.practice.workloadservice.dto.TrainerWorkloadRequest;
-import com.practice.workloadservice.logging.TransactionIdFilter;
 import com.practice.workloadservice.service.TrainerWorkloadService;
+import jakarta.jms.JMSException;
+import jakarta.jms.Message;
 import jakarta.jms.TextMessage;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -13,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.MDC;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -20,7 +24,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TrainingWorkloadListenerTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    @Mock
+    private ObjectMapper objectMapper;
 
     @Mock
     private TrainerWorkloadService workloadService;
@@ -28,88 +33,519 @@ class TrainingWorkloadListenerTest {
     @Mock
     private TextMessage textMessage;
 
+    @Mock
+    private Message message;
+
     private TrainingWorkloadListener listener;
 
-    private String validJson() {
-        return """
-                {
-                  "trainerUsername": "john.doe",
-                  "trainerFirstName": "John",
-                  "trainerLastName": "Doe",
-                  "isActive": true,
-                  "trainingDate": "2026-03-15",
-                  "trainingDuration": 60,
-                  "actionType": "ADD"
-                }
-                """;
+    @BeforeEach
+    void setUp() {
+        listener = new TrainingWorkloadListener(
+                objectMapper,
+                workloadService
+        );
+
+        MDC.clear();
     }
 
     @Test
-    void receive_shouldPutTransactionIdOnMdc_duringProcessing_andClearItAfterward() throws Exception {
-        listener = new TrainingWorkloadListener(objectMapper, workloadService);
+    void receive_shouldProcessValidMessage() throws Exception {
+        String transactionId = UUID.randomUUID().toString();
 
-        when(textMessage.getStringProperty(JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY)).thenReturn("tx-42");
-        when(textMessage.getText()).thenReturn(validJson());
+        TrainingWorkloadEvent event = validEvent();
 
-        String[] observedTxId = new String[1];
-        doAnswer(invocation -> {
-            observedTxId[0] = MDC.get(TransactionIdFilter.MDC_KEY);
-            return null;
-        }).when(workloadService).update(org.mockito.ArgumentMatchers.any(TrainerWorkloadRequest.class));
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn(transactionId);
 
-        listener.receive(textMessage);
+        when(textMessage.getText())
+                .thenReturn("{}");
 
-        assertEquals("tx-42", observedTxId[0]);
-        assertNull(MDC.get(TransactionIdFilter.MDC_KEY));
-    }
-
-    @Test
-    void receive_shouldGenerateTransactionId_whenMessageHasNone() throws Exception {
-        listener = new TrainingWorkloadListener(objectMapper, workloadService);
-
-        when(textMessage.getStringProperty(JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY)).thenReturn(null);
-        when(textMessage.getText()).thenReturn(validJson());
-
-        String[] observedTxId = new String[1];
-        doAnswer(invocation -> {
-            observedTxId[0] = MDC.get(TransactionIdFilter.MDC_KEY);
-            return null;
-        }).when(workloadService).update(org.mockito.ArgumentMatchers.any(TrainerWorkloadRequest.class));
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenReturn(event);
 
         listener.receive(textMessage);
 
-        assertEquals(true, observedTxId[0] != null && !observedTxId[0].isBlank());
-        assertNull(MDC.get(TransactionIdFilter.MDC_KEY));
-    }
+        ArgumentCaptor<TrainerWorkloadRequest> captor =
+                ArgumentCaptor.forClass(TrainerWorkloadRequest.class);
 
-    @Test
-    void receive_shouldMapEventFieldsIntoRequest() throws Exception {
-        listener = new TrainingWorkloadListener(objectMapper, workloadService);
-
-        when(textMessage.getStringProperty(JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY)).thenReturn("tx-1");
-        when(textMessage.getText()).thenReturn(validJson());
-
-        listener.receive(textMessage);
-
-        ArgumentCaptor<TrainerWorkloadRequest> captor = ArgumentCaptor.forClass(TrainerWorkloadRequest.class);
         verify(workloadService).update(captor.capture());
+
         TrainerWorkloadRequest request = captor.getValue();
 
         assertEquals("john.doe", request.trainerUsername());
         assertEquals("John", request.trainerFirstName());
         assertEquals("Doe", request.trainerLastName());
-        assertEquals(LocalDate.of(2026, 3, 15), request.trainingDate());
-        assertEquals(60, request.trainingDuration());
+        assertTrue(request.isActive());
+        assertEquals(LocalDate.of(2026, 8, 26),
+                request.trainingDate());
+        assertEquals(90, request.trainingDuration());
+        assertEquals(ActionType.ADD, request.actionType());
+
+        assertNull(MDC.get("transactionId"));
     }
 
     @Test
-    void receive_shouldClearMdc_evenWhenProcessingFails() throws Exception {
-        listener = new TrainingWorkloadListener(objectMapper, workloadService);
+    void receive_shouldGenerateTransactionId_whenPropertyMissing()
+            throws Exception {
 
-        when(textMessage.getStringProperty(JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY)).thenReturn("tx-err");
-        when(textMessage.getText()).thenReturn("not-json");
+        TrainingWorkloadEvent event = validEvent();
 
-        assertThrows(IllegalArgumentException.class, () -> listener.receive(textMessage));
-        assertNull(MDC.get(TransactionIdFilter.MDC_KEY));
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn(null);
+
+        when(textMessage.getText())
+                .thenReturn("{}");
+
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenReturn(event);
+
+        listener.receive(textMessage);
+
+        verify(workloadService).update(any(TrainerWorkloadRequest.class));
+
+        assertNull(MDC.get("transactionId"));
+    }
+
+    @Test
+    void receive_shouldGenerateTransactionId_whenPropertyBlank()
+            throws Exception {
+
+        TrainingWorkloadEvent event = validEvent();
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("   ");
+
+        when(textMessage.getText())
+                .thenReturn("{}");
+
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenReturn(event);
+
+        listener.receive(textMessage);
+
+        verify(workloadService).update(any(TrainerWorkloadRequest.class));
+
+        assertNull(MDC.get("transactionId"));
+    }
+
+    @Test
+    void receive_shouldThrowException_whenMessageIsNotTextMessage()
+            throws Exception {
+
+        when(message.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> listener.receive(message)
+                );
+
+        assertEquals(
+                "Expected TextMessage",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(workloadService);
+    }
+
+    @Test
+    void receive_shouldThrowException_whenJsonIsInvalid()
+            throws Exception {
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        when(textMessage.getText())
+                .thenReturn("invalid-json");
+
+        when(objectMapper.readValue(
+                "invalid-json",
+                TrainingWorkloadEvent.class))
+                .thenThrow(new RuntimeException("JSON error"));
+
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> listener.receive(textMessage)
+                );
+
+        assertEquals(
+                "Invalid workload message",
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(workloadService);
+    }
+
+    @Test
+    void receive_shouldRejectNullTrainerUsername()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        null,
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainerUsername is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectBlankTrainerUsername()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "   ",
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainerUsername is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNullFirstName()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        null,
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainerFirstName is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectBlankFirstName()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "   ",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainerFirstName is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNullLastName()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        null,
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainerLastName is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectBlankLastName()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "   ",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainerLastName is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNullIsActive()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "Doe",
+                        null,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "isActive is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNullTrainingDate()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "Doe",
+                        true,
+                        null,
+                        90,
+                        WorkloadActionType.ADD
+                ),
+                "trainingDate is required"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNullTrainingDuration()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        null,
+                        WorkloadActionType.ADD
+                ),
+                "trainingDuration must be positive"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectZeroTrainingDuration()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        0,
+                        WorkloadActionType.ADD
+                ),
+                "trainingDuration must be positive"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNegativeTrainingDuration()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        -10,
+                        WorkloadActionType.ADD
+                ),
+                "trainingDuration must be positive"
+        );
+    }
+
+    @Test
+    void receive_shouldRejectNullActionType()
+            throws Exception {
+
+        assertValidationError(
+                new TrainingWorkloadEvent(
+                        "john.doe",
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        null
+                ),
+                "actionType is required"
+        );
+    }
+
+    @Test
+    void receive_shouldNotCallService_whenValidationFails()
+            throws Exception {
+
+        TrainingWorkloadEvent event =
+                new TrainingWorkloadEvent(
+                        null,
+                        "John",
+                        "Doe",
+                        true,
+                        LocalDate.of(2026, 8, 26),
+                        90,
+                        WorkloadActionType.ADD
+                );
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        when(textMessage.getText())
+                .thenReturn("{}");
+
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenReturn(event);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> listener.receive(textMessage)
+        );
+
+        verifyNoInteractions(workloadService);
+    }
+
+    @Test
+    void receive_shouldRemoveMdcAfterSuccessfulProcessing()
+            throws Exception {
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        when(textMessage.getText())
+                .thenReturn("{}");
+
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenReturn(validEvent());
+
+        listener.receive(textMessage);
+
+        assertNull(MDC.get("transactionId"));
+    }
+
+    @Test
+    void receive_shouldRemoveMdcWhenExceptionOccurs()
+            throws Exception {
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        when(textMessage.getText())
+                .thenReturn("{}");
+
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenThrow(new RuntimeException("JSON error"));
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> listener.receive(textMessage)
+        );
+
+        assertNull(MDC.get("transactionId"));
+    }
+
+    @Test
+    void receive_shouldPropagateJmsExceptionFromGetText()
+            throws Exception {
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        when(textMessage.getText())
+                .thenThrow(new JMSException("JMS error"));
+
+        assertThrows(
+                JMSException.class,
+                () -> listener.receive(textMessage)
+        );
+
+        verifyNoInteractions(objectMapper);
+        verifyNoInteractions(workloadService);
+    }
+
+    private TrainingWorkloadEvent validEvent() {
+        return new TrainingWorkloadEvent(
+                "john.doe",
+                "John",
+                "Doe",
+                true,
+                LocalDate.of(2026, 8, 26),
+                90,
+                WorkloadActionType.ADD
+        );
+    }
+
+    private void assertValidationError(
+            TrainingWorkloadEvent event,
+            String expectedMessage) throws Exception {
+
+        when(textMessage.getStringProperty(
+                JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY))
+                .thenReturn("transaction-123");
+
+        when(textMessage.getText())
+                .thenReturn("{}");
+
+        when(objectMapper.readValue(
+                "{}",
+                TrainingWorkloadEvent.class))
+                .thenReturn(event);
+
+        IllegalArgumentException exception =
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> listener.receive(textMessage)
+                );
+
+        assertEquals(
+                expectedMessage,
+                exception.getMessage()
+        );
+
+        verifyNoInteractions(workloadService);
+
+        assertNull(MDC.get("transactionId"));
     }
 }

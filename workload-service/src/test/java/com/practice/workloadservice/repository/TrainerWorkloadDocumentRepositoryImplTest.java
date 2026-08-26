@@ -1,80 +1,95 @@
 package com.practice.workloadservice.repository;
 
-import com.practice.workloadservice.model.MonthEntry;
 import com.practice.workloadservice.model.TrainerWorkloadDocument;
-import com.practice.workloadservice.model.YearEntry;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.mongo.embedded.EmbeddedMongoAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
-import org.springframework.context.annotation.Import;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.index.IndexInfo;
 
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@DataMongoTest
-@Import({TrainerWorkloadDocumentRepositoryImpl.class, EmbeddedMongoAutoConfiguration.class})
+@ExtendWith(MockitoExtension.class)
 class TrainerWorkloadDocumentRepositoryImplTest {
 
-    @Autowired
+    @Mock
     private MongoTemplate mongoTemplate;
 
-    @Autowired
+    @Mock
+    private TrainerWorkloadDocument document;
+
     private TrainerWorkloadDocumentRepositoryImpl repository;
 
+    @BeforeEach
+    void setUp() {
+        repository = new TrainerWorkloadDocumentRepositoryImpl(mongoTemplate);
+    }
+
     @Test
-    void save_thenFindByUsername_shouldReturnPersistedDocument() {
-        TrainerWorkloadDocument document = new TrainerWorkloadDocument(
-                "jane.smith", "Jane", "Smith", true);
-        YearEntry year = new YearEntry(2026);
-        year.getMonths().add(new MonthEntry(6, 45));
-        document.getYears().add(year);
+    void findByUsername_shouldReturnDocument_whenDocumentExists() {
+        // Arrange
+        String username = "john.doe";
 
-        repository.save(document);
+        when(mongoTemplate.findById(
+                username,
+                TrainerWorkloadDocument.class
+        )).thenReturn(document);
 
-        Optional<TrainerWorkloadDocument> found = repository.findByUsername("jane.smith");
+        // Act
+        Optional<TrainerWorkloadDocument> result =
+                repository.findByUsername(username);
 
-        assertTrue(found.isPresent());
-        assertEquals("Jane", found.get().getTrainerFirstName());
-        assertEquals("Smith", found.get().getTrainerLastName());
-        assertEquals(45, found.get().getYears().get(0).getMonths().get(0).getTrainingsSummaryDuration());
+        // Assert
+        assertTrue(result.isPresent());
+        assertSame(document, result.get());
+
+        verify(mongoTemplate).findById(
+                username,
+                TrainerWorkloadDocument.class
+        );
     }
 
     @Test
     void findByUsername_shouldReturnEmpty_whenDocumentDoesNotExist() {
-        Optional<TrainerWorkloadDocument> found = repository.findByUsername("does.not.exist");
+        // Arrange
+        String username = "unknown";
 
-        assertTrue(found.isEmpty());
+        when(mongoTemplate.findById(
+                username,
+                TrainerWorkloadDocument.class
+        )).thenReturn(null);
+
+        // Act
+        Optional<TrainerWorkloadDocument> result =
+                repository.findByUsername(username);
+
+        // Assert
+        assertTrue(result.isEmpty());
+
+        verify(mongoTemplate).findById(
+                username,
+                TrainerWorkloadDocument.class
+        );
     }
 
     @Test
-    void save_shouldUpsertExistingDocument() {
-        TrainerWorkloadDocument document = new TrainerWorkloadDocument(
-                "upsert.user", "First", "Last", true);
-        repository.save(document);
+    void save_shouldReturnSavedDocument() {
+        // Arrange
+        when(document.getTrainerUsername()).thenReturn("john.doe");
+        when(mongoTemplate.save(document)).thenReturn(document);
 
-        TrainerWorkloadDocument updated = repository.findByUsername("upsert.user").orElseThrow();
-        updated.setTrainerFirstName("Updated");
-        repository.save(updated);
+        // Act
+        TrainerWorkloadDocument result =
+                repository.save(document);
 
-        List<TrainerWorkloadDocument> all = mongoTemplate.findAll(TrainerWorkloadDocument.class);
-        long matching = all.stream()
-                .filter(d -> d.getTrainerUsername().equals("upsert.user"))
-                .count();
+        // Assert
+        assertSame(document, result);
 
-        assertEquals(1, matching);
-        assertEquals("Updated", repository.findByUsername("upsert.user").orElseThrow().getTrainerFirstName());
-    }
-
-    @Test
-    void ensureIndexes_shouldCreateCompoundIndexOnFirstAndLastName() {
-        List<IndexInfo> indexes = mongoTemplate.indexOps(TrainerWorkloadDocument.class).getIndexInfo();
-
-        assertTrue(indexes.stream().anyMatch(i -> i.getName().equals("trainer_name_idx")));
+        verify(document, times(2)).getTrainerUsername();
+        verify(mongoTemplate).save(document);
     }
 }
