@@ -7,4 +7,6 @@ public final class JmsConfig {
 
     public static final String TRAINING_WORKLOAD_QUEUE_PROPERTY =
             "${jms.queue.training-workload}";
+
+    public static final String TRANSACTION_ID_MESSAGE_PROPERTY = "transactionId";
 }

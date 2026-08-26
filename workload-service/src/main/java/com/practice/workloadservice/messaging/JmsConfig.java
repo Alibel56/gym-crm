@@ -10,4 +10,6 @@ public final class JmsConfig {
 
     public static final String TRAINING_WORKLOAD_CONCURRENCY_PROPERTY =
             "${jms.listener.concurrency:3-10}";
+
+    public static final String TRANSACTION_ID_MESSAGE_PROPERTY = "transactionId";
 }

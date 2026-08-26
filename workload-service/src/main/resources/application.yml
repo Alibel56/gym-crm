@@ -10,6 +10,10 @@ spring:
     user: ${ACTIVEMQ_USER:admin}
     password: ${ACTIVEMQ_PASSWORD:admin}
 
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/workload_service}
+
 jms:
   queue:
     training-workload: ${JMS_TRAINING_WORKLOAD_QUEUE:training-workload}

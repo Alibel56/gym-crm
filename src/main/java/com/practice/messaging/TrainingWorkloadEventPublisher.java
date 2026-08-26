@@ -2,6 +2,8 @@ package com.practice.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.practice.logging.TransactionIdFilter;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Component;
@@ -25,10 +27,18 @@ public class TrainingWorkloadEventPublisher {
     public void publish(TrainingWorkloadEvent event) {
         try {
             String message = objectMapper.writeValueAsString(event);
+            String transactionId = MDC.get(TransactionIdFilter.MDC_KEY);
 
             jmsTemplate.convertAndSend(
                     trainingWorkloadQueue,
-                    message
+                    message,
+                    jmsMessage -> {
+                        if (transactionId != null && !transactionId.isBlank()) {
+                            jmsMessage.setStringProperty(
+                                    JmsConfig.TRANSACTION_ID_MESSAGE_PROPERTY, transactionId);
+                        }
+                        return jmsMessage;
+                    }
             );
 
         } catch (JsonProcessingException e) {
