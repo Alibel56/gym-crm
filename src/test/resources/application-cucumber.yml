@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:gym-crm-cucumber;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password: sa
+
+  activemq:
+    broker-url: vm://embedded-broker?broker.persistent=false
+    user:
+    password:
+
+hibernate:
+  dialect: org.hibernate.dialect.H2Dialect
+  hbm2ddl:
+    auto: create-drop
+  show_sql: false
+  format_sql: false
+
+jms:
+  queue:
+    training-workload: training-workload-cucumber
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+security:
+  jwt:
+    secret: VGhpc0lzQUN1Y3VtYmVyVGVzdE9ubHlTZWNyZXRLZXlGb3JHeW1Dcm1BcGk=
+    expiration-seconds: 3600
+
+management:
+  health:
+    ldap:
+      enabled: false

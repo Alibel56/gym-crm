@@ -16,6 +16,7 @@
       </GradleProjectSettings>
       <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/discovery-service" />
+        <option name="gradleHome" value="C:\Users\LENOVO\Pictures\exe\gradle-9.3.0" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/discovery-service" />
@@ -24,6 +25,7 @@
       </GradleProjectSettings>
       <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/workload-service" />
+        <option name="gradleHome" value="C:\Users\LENOVO\Pictures\exe\gradle-9.3.0" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/workload-service" />

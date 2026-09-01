@@ -65,6 +65,14 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter'
     testImplementation 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    testImplementation platform('io.cucumber:cucumber-bom:7.18.1')
+    testImplementation 'io.cucumber:cucumber-java'
+    testImplementation 'io.cucumber:cucumber-spring'
+    testImplementation 'io.cucumber:cucumber-junit-platform-engine'
+    testImplementation 'org.junit.platform:junit-platform-suite'
+
+    testImplementation 'org.apache.activemq:activemq-broker'
 }
 
 tasks.named('test') {
