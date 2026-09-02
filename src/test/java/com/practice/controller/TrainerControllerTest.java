@@ -2,15 +2,15 @@ package com.practice.controller;
 
 import com.practice.dto.request.GetTrainerTrainingsListRequest;
 import com.practice.dto.request.SwitchActiveFlagRequest;
-import com.practice.dto.request.TrainerRegistrationRequest;
 import com.practice.dto.request.UpdateTrainerProfileRequest;
 import com.practice.dto.request.UsernameRequest;
 import com.practice.dto.response.GetTrainerProfileResponse;
 import com.practice.dto.response.GetTrainerTrainingsListResponse;
-import com.practice.dto.response.RegistrationResponse;
 import com.practice.dto.response.UpdateTrainerProfileResponse;
 import com.practice.service.TrainerService;
 import com.practice.service.TrainingService;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +46,7 @@ class TrainerControllerTest {
     }
 
     @Test
+    @PositiveTest
     void getProfile_shouldReturnTrainerProfile() {
         
         GetTrainerProfileResponse expectedResponse =
@@ -74,6 +75,7 @@ class TrainerControllerTest {
     }
 
     @Test
+    @PositiveTest
     void updateProfile_shouldReturnUpdatedTrainerProfile() {
         
         UpdateTrainerProfileRequest request =
@@ -101,6 +103,7 @@ class TrainerControllerTest {
     }
 
     @Test
+    @PositiveTest
     void switchActive_shouldCallServiceAndReturnOk() {
         
         SwitchActiveFlagRequest request =
@@ -124,6 +127,7 @@ class TrainerControllerTest {
     }
 
     @Test
+    @PositiveTest
     void getTrainings_shouldCreateRequestAndReturnTrainings() {
         
         LocalDate periodFrom = LocalDate.of(2026, 1, 1);
@@ -186,6 +190,7 @@ class TrainerControllerTest {
     }
 
     @Test
+    @EdgeCaseTest
     void getTrainings_shouldSupportNullOptionalFilters() {
         
         when(trainingService.findAllTrainerTrainings(
@@ -229,6 +234,7 @@ class TrainerControllerTest {
     }
 
     @Test
+    @EdgeCaseTest
     void getTrainings_shouldReturnEmptyListWhenServiceReturnsEmptyList() {
         
         when(trainingService.findAllTrainerTrainings(

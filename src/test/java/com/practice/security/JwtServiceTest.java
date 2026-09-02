@@ -1,5 +1,8 @@
 package com.practice.security;
 
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import io.jsonwebtoken.JwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +36,7 @@ class JwtServiceTest {
     }
 
     @Test
+    @PositiveTest
     void generateTokenShouldCreateValidToken() {
         String token = jwtService.generateToken(userDetails);
 
@@ -44,6 +48,7 @@ class JwtServiceTest {
     }
 
     @Test
+    @PositiveTest
     void isValidShouldReturnFalseForDifferentUsername() {
         String token = jwtService.generateToken(userDetails);
 
@@ -57,6 +62,8 @@ class JwtServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void expiredTokenShouldThrowJwtException() throws InterruptedException {
         JwtService shortLivedJwtService = new JwtService(
                 Base64.getEncoder().encodeToString(
@@ -75,6 +82,7 @@ class JwtServiceTest {
     }
 
     @Test
+    @PositiveTest
     void tokenSignedWithAnotherKeyShouldBeRejected() {
         String token = jwtService.generateToken(userDetails);
 
@@ -91,6 +99,7 @@ class JwtServiceTest {
     }
 
     @Test
+    @PositiveTest
     void getExpirationSecondsShouldReturnConfiguredValue() {
         assertThat(jwtService.getExpirationSeconds()).isEqualTo(3600);
     }

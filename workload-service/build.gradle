@@ -63,5 +63,16 @@ dependencies {
 	testImplementation 'org.apache.activemq:activemq-broker'
 }
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		def includeTagsProperty = System.getProperty('includeTags')
+
+		if (includeTagsProperty) {
+			includeTags(*includeTagsProperty.split(',')*.trim().findAll { it })
+		}
+	}
+
+	if (System.getProperty('includeTags')) {
+		exclude '**/RunComponentTests.class'
+		exclude '**/RunIntegrationTests.class'
+	}
 }

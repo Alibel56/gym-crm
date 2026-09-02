@@ -1,6 +1,8 @@
 package com.practice.dao;
 
 import com.practice.entity.TrainingType;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
@@ -40,6 +42,7 @@ class TrainingTypeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findById_shouldReturnTrainingType_whenExists() {
         TrainingType cardio = TrainingType.builder()
                 .id(1L)
@@ -62,6 +65,7 @@ class TrainingTypeRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findById_shouldReturnEmptyOptional_whenNotExists() {
         when(session.createQuery(
                 "from TrainingType where id = :id",
@@ -77,6 +81,7 @@ class TrainingTypeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnListOfTrainingTypes() {
         TrainingType cardio = TrainingType.builder()
                 .id(1L)
@@ -101,6 +106,7 @@ class TrainingTypeRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findAll_shouldReturnEmptyList_whenNoTrainingTypes() {
         when(session.createQuery("from TrainingType", TrainingType.class))
                 .thenReturn(query);

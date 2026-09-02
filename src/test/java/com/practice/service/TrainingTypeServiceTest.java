@@ -4,6 +4,8 @@ import com.practice.dao.TrainingTypeRepository;
 import com.practice.dto.response.TrainingTypesSummaryResponse;
 import com.practice.entity.TrainingType;
 import com.practice.mapper.response.TrainingTypesSummaryResponseMapper;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +38,7 @@ class TrainingTypeServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnMappedTrainingTypes() {
         
         TrainingType cardio = TrainingType.builder()
@@ -77,6 +80,7 @@ class TrainingTypeServiceTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findAll_shouldReturnEmptyListWhenNoTrainingTypesExist() {
         
         when(trainingTypeRepository.findAll())

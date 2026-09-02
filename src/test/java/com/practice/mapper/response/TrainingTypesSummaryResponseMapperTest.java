@@ -2,6 +2,7 @@ package com.practice.mapper.response;
 
 import com.practice.dto.response.TrainingTypesSummaryResponse;
 import com.practice.entity.TrainingType;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,7 @@ class TrainingTypesSummaryResponseMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapTrainingTypeSummary() {
         TrainingType trainingType = TrainingType.builder()
                 .id(1L)

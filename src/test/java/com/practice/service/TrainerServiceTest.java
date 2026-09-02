@@ -3,7 +3,10 @@ package com.practice.service;
 import com.practice.dao.TraineeRepositoryImpl;
 import com.practice.dao.TrainerRepositoryImpl;
 import com.practice.dao.TrainingTypeRepository;
-import com.practice.dto.request.*;
+import com.practice.dto.request.SwitchActiveFlagRequest;
+import com.practice.dto.request.TrainerRegistrationRequest;
+import com.practice.dto.request.UpdateTrainerProfileRequest;
+import com.practice.dto.request.UsernameRequest;
 import com.practice.dto.response.GetTrainerProfileResponse;
 import com.practice.dto.response.RegistrationResponse;
 import com.practice.dto.response.TrainerSummaryResponse;
@@ -16,6 +19,9 @@ import com.practice.mapper.response.GetTrainerProfileResponseMapper;
 import com.practice.mapper.response.TrainerSummaryResponseMapper;
 import com.practice.mapper.response.UpdateTrainerProfileResponseMapper;
 import com.practice.metrics.GymMetrics;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import com.practice.utility.Credentials;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +33,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,6 +85,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void createShouldCreateTrainerAndReturnCredentials() {
         TrainerRegistrationRequest request =
                 mock(TrainerRegistrationRequest.class);
@@ -119,6 +127,8 @@ class TrainerServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void createShouldThrowExceptionWhenTrainingTypeNotFound() {
         TrainerRegistrationRequest request =
                 mock(TrainerRegistrationRequest.class);
@@ -140,6 +150,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void updateShouldUpdateTrainerProfile() {
         UpdateTrainerProfileRequest request =
                 mock(UpdateTrainerProfileRequest.class);
@@ -175,6 +186,8 @@ class TrainerServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void updateShouldThrowExceptionWhenTrainerNotFound() {
         UpdateTrainerProfileRequest request =
                 mock(UpdateTrainerProfileRequest.class);
@@ -189,6 +202,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findByIdShouldReturnTrainer() {
         Trainer trainer = new Trainer();
 
@@ -201,6 +215,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findAllShouldReturnAllTrainers() {
         List<Trainer> trainers =
                 List.of(new Trainer(), new Trainer());
@@ -213,6 +228,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findByUsernameShouldReturnMappedProfile() {
         UsernameRequest request = mock(UsernameRequest.class);
         Trainer trainer = new Trainer();
@@ -235,6 +251,8 @@ class TrainerServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void findByUsernameShouldThrowExceptionWhenTrainerNotFound() {
         UsernameRequest request = mock(UsernameRequest.class);
 
@@ -248,6 +266,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findAllNotAssignedShouldReturnMappedTrainers() {
         UsernameRequest request = mock(UsernameRequest.class);
 
@@ -281,6 +300,7 @@ class TrainerServiceTest {
     }
 
     @Test
+    @PositiveTest
     void switchActiveShouldChangeActiveStatus() {
         SwitchActiveFlagRequest request =
                 mock(SwitchActiveFlagRequest.class);
@@ -302,6 +322,8 @@ class TrainerServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void switchActiveShouldThrowExceptionWhenTrainerNotFound() {
         SwitchActiveFlagRequest request =
                 mock(SwitchActiveFlagRequest.class);

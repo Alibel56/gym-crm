@@ -1,5 +1,8 @@
 package com.practice.security;
 
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -53,6 +56,8 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void shouldContinueFilterChainWhenAuthorizationHeaderIsMissing() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -67,6 +72,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @PositiveTest
     void shouldAuthenticateUserWhenTokenIsValid() throws Exception {
         String token = "valid-token";
         String tokenId = "token-id";
@@ -113,6 +119,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @PositiveTest
     void shouldNotAuthenticateUserWhenTokenIsRevoked() throws Exception {
         String token = "revoked-token";
         String tokenId = "token-id";
@@ -139,6 +146,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @NegativeTest
     void shouldClearSecurityContextWhenTokenIsInvalid() throws Exception {
         String token = "invalid-token";
 

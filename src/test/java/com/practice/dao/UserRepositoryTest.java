@@ -1,6 +1,8 @@
 package com.practice.dao;
 
 import com.practice.entity.User;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
@@ -14,9 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserRepositoryTest {
@@ -45,6 +45,7 @@ class UserRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findByUsername_shouldReturnUser() {
         User user = User.builder()
                 .id(1L)
@@ -77,6 +78,7 @@ class UserRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findByUsername_shouldReturnEmptyOptional() {
         when(session.createQuery(
                 """
@@ -102,6 +104,7 @@ class UserRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void existsByUsername_shouldReturnTrue() {
         when(session.createQuery(
                 """
@@ -127,6 +130,7 @@ class UserRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void existsByUsername_shouldReturnFalse_whenCountIsZero() {
         when(session.createQuery(
                 """
@@ -149,6 +153,7 @@ class UserRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void existsByUsername_shouldReturnFalse_whenCountIsNull() {
         when(session.createQuery(
                 """
@@ -171,6 +176,7 @@ class UserRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnUsers() {
         List<User> users = List.of(
                 User.builder().id(1L).userName("user1").build(),

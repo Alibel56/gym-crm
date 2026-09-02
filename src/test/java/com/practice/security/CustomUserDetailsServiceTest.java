@@ -2,6 +2,9 @@ package com.practice.security;
 
 import com.practice.dao.UserRepository;
 import com.practice.entity.User;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +15,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class CustomUserDetailsServiceTest {
@@ -29,6 +34,7 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
+    @PositiveTest
     void loadUserByUsernameShouldReturnUserDetails() {
         User user = new User();
         user.setUserName("john");
@@ -51,6 +57,8 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void loadUserByUsernameShouldThrowExceptionWhenUserNotFound() {
         when(userRepository.findByUsername("john"))
                 .thenReturn(Optional.empty());

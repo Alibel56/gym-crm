@@ -1,5 +1,10 @@
 package com.practice.workloadservice.service;
 
+import com.practice.testtags.PositiveTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+
 import com.practice.workloadservice.dto.ActionType;
 import com.practice.workloadservice.dto.MonthlyWorkloadResponse;
 import com.practice.workloadservice.dto.TrainerWorkloadRequest;
@@ -35,6 +40,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @NegativeTest
     void update_shouldCreateNewDocument_whenTrainerDoesNotExist() {
         service = newService();
         when(repository.findByUsername("john.doe")).thenReturn(Optional.empty());
@@ -62,6 +68,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @PositiveTest
     void update_shouldAddDurationToExistingMonth_whenRecordExists() {
         service = newService();
         TrainerWorkloadDocument existing = new TrainerWorkloadDocument("john.doe", "John", "Doe", true);
@@ -83,6 +90,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @PositiveTest
     void update_shouldCreateNewMonth_whenYearExistsButMonthDoesNot() {
         service = newService();
         TrainerWorkloadDocument existing = new TrainerWorkloadDocument("john.doe", "John", "Doe", true);
@@ -105,6 +113,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @PositiveTest
     void update_shouldSubtractDuration_whenActionIsDelete() {
         service = newService();
         TrainerWorkloadDocument existing = new TrainerWorkloadDocument("john.doe", "John", "Doe", true);
@@ -126,6 +135,9 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void update_shouldThrow_andNotSave_whenResultingDurationIsNegative() {
         service = newService();
         TrainerWorkloadDocument existing = new TrainerWorkloadDocument("john.doe", "John", "Doe", true);
@@ -144,6 +156,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @PositiveTest
     void update_shouldRefreshTrainerIdentity_whenRecordExists() {
         service = newService();
         TrainerWorkloadDocument existing = new TrainerWorkloadDocument("john.doe", "Old", "Name", false);
@@ -163,6 +176,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @PositiveTest
     void getByUsername_shouldReturnSortedYearsAndMonths() {
         service = newService();
         TrainerWorkloadDocument doc = new TrainerWorkloadDocument("john.doe", "John", "Doe", true);
@@ -185,6 +199,8 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void getByUsername_shouldThrow_whenNotFound() {
         service = newService();
         when(repository.findByUsername("missing")).thenReturn(Optional.empty());
@@ -193,6 +209,7 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @EdgeCaseTest
     void getMonthly_shouldReturnZero_whenNoDataForMonth() {
         service = newService();
         TrainerWorkloadDocument doc = new TrainerWorkloadDocument("john.doe", "John", "Doe", true);
@@ -204,6 +221,9 @@ class TrainerWorkloadServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void getMonthly_shouldThrow_whenMonthOutOfRange() {
         service = newService();
         assertThrows(IllegalArgumentException.class, () -> service.getMonthly("john.doe", 2026, 13));

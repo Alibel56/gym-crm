@@ -3,7 +3,9 @@ package com.practice.messaging;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.practice.logging.TransactionIdFilter;
-import jakarta.jms.JMSException;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import jakarta.jms.Message;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,9 +21,7 @@ import org.springframework.jms.core.MessagePostProcessor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TrainingWorkloadEventPublisherTest {
@@ -51,6 +51,7 @@ class TrainingWorkloadEventPublisherTest {
     }
 
     @Test
+    @PositiveTest
     void publish_shouldSerializeAndSendMessage() throws Exception {
         String json = "{\"trainingId\":1,\"action\":\"CREATE\"}";
 
@@ -68,6 +69,7 @@ class TrainingWorkloadEventPublisherTest {
     }
 
     @Test
+    @PositiveTest
     void publish_shouldAttachTransactionIdFromMdc_whenPresent() throws Exception {
         String json = "{\"trainingId\":1,\"action\":\"CREATE\"}";
         String transactionId = "tx-123";
@@ -89,6 +91,7 @@ class TrainingWorkloadEventPublisherTest {
     }
 
     @Test
+    @PositiveTest
     void publish_shouldNotAttachTransactionId_whenAbsentFromMdc() throws Exception {
         String json = "{\"trainingId\":1,\"action\":\"CREATE\"}";
 
@@ -110,6 +113,8 @@ class TrainingWorkloadEventPublisherTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void publish_shouldThrowIllegalStateException_whenSerializationFails()
             throws Exception {
 

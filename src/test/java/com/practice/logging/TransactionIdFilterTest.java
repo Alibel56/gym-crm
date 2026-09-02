@@ -1,5 +1,9 @@
 package com.practice.logging;
 
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +34,7 @@ class TransactionIdFilterTest {
     }
 
     @Test
+    @PositiveTest
     void doFilter_shouldUseExistingTransactionId()
             throws ServletException, IOException {
 
@@ -51,6 +56,8 @@ class TransactionIdFilterTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void doFilter_shouldGenerateTransactionIdWhenHeaderMissing()
             throws ServletException, IOException {
 
@@ -75,6 +82,8 @@ class TransactionIdFilterTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void doFilter_shouldClearMdcEvenWhenExceptionOccurs()
             throws ServletException, IOException {
 

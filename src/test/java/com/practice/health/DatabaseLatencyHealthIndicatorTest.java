@@ -1,5 +1,7 @@
 package com.practice.health;
 
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ class DatabaseLatencyHealthIndicatorTest {
     }
 
     @Test
+    @PositiveTest
     void health_whenDatabaseReachable_reportsUpWithResponseTime() {
         healthIndicator.setDataSource(inMemoryH2DataSource());
 
@@ -30,6 +33,7 @@ class DatabaseLatencyHealthIndicatorTest {
     }
 
     @Test
+    @NegativeTest
     void health_whenDatabaseUnreachable_reportsDownWithError() {
         DataSource brokenDataSource = brokenDataSource();
         healthIndicator.setDataSource(brokenDataSource);

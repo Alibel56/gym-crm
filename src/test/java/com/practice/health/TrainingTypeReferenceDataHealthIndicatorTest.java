@@ -2,6 +2,10 @@ package com.practice.health;
 
 import com.practice.dto.response.TrainingTypesSummaryResponse;
 import com.practice.service.TrainingTypeService;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +35,7 @@ class TrainingTypeReferenceDataHealthIndicatorTest {
     }
 
     @Test
+    @PositiveTest
     void health_shouldReturnUp_whenTrainingTypesExist() {
         // Arrange
         TrainingTypesSummaryResponse firstTrainingType =
@@ -55,6 +60,7 @@ class TrainingTypeReferenceDataHealthIndicatorTest {
     }
 
     @Test
+    @EdgeCaseTest
     void health_shouldReturnDown_whenTrainingTypesAreEmpty() {
         // Arrange
         when(trainingTypeService.findAll())
@@ -73,6 +79,8 @@ class TrainingTypeReferenceDataHealthIndicatorTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void health_shouldReturnDown_whenServiceThrowsException() {
         RuntimeException exception =
                 new RuntimeException("Database connection failed");

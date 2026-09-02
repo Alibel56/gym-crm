@@ -1,5 +1,7 @@
 package com.practice.security;
 
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -15,12 +17,14 @@ class BruteForceProtectionServiceTest {
     }
 
     @Test
+    @PositiveTest
     void shouldNotBlockUserInitially() {
         assertThat(service.isBlocked("john")).isFalse();
         assertThat(service.remainingBlockSeconds("john")).isZero();
     }
 
     @Test
+    @NegativeTest
     void shouldBlockUserAfterThreeFailedAttempts() {
         service.loginFailed("john");
         service.loginFailed("john");
@@ -35,6 +39,7 @@ class BruteForceProtectionServiceTest {
     }
 
     @Test
+    @NegativeTest
     void loginSucceededShouldClearFailedAttempts() {
         service.loginFailed("john");
         service.loginFailed("john");
@@ -49,6 +54,7 @@ class BruteForceProtectionServiceTest {
     }
 
     @Test
+    @PositiveTest
     void usernameShouldBeCaseInsensitive() {
         service.loginFailed("John");
         service.loginFailed(" john ");

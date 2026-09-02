@@ -1,5 +1,7 @@
 package com.practice.metrics;
 
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Timer;
@@ -29,6 +31,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void registerGaugesShouldRegisterActiveTraineesGauge() {
         when(queryService.countActiveTrainees())
                 .thenReturn(5D);
@@ -44,6 +47,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void activeTraineesGaugeShouldReturnUpdatedValue() {
         when(queryService.countActiveTrainees())
                 .thenReturn(3D)
@@ -61,6 +65,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void recordAuthenticationAttemptShouldIncrementSuccessCounter() {
         gymMetrics.recordAuthenticationAttempt(true);
         gymMetrics.recordAuthenticationAttempt(true);
@@ -75,6 +80,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @NegativeTest
     void recordAuthenticationAttemptShouldIncrementFailureCounter() {
         gymMetrics.recordAuthenticationAttempt(false);
 
@@ -88,6 +94,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void authenticationCountersShouldBeSeparatedByOutcome() {
         gymMetrics.recordAuthenticationAttempt(true);
         gymMetrics.recordAuthenticationAttempt(false);
@@ -111,6 +118,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void recordRegistrationShouldIncrementTraineeCounter() {
         gymMetrics.recordRegistration("trainee");
         gymMetrics.recordRegistration("trainee");
@@ -125,6 +133,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void recordRegistrationShouldIncrementTrainerCounter() {
         gymMetrics.recordRegistration("trainer");
 
@@ -138,6 +147,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void registrationCountersShouldBeSeparatedByRole() {
         gymMetrics.recordRegistration("trainee");
         gymMetrics.recordRegistration("trainer");
@@ -161,6 +171,7 @@ class GymMetricsTest {
     }
 
     @Test
+    @PositiveTest
     void stopTrainingCreationTimerShouldRecordExecution() {
         Timer.Sample sample =
                 gymMetrics.startTrainingCreationTimer();

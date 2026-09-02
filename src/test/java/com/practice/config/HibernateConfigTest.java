@@ -1,5 +1,7 @@
 package com.practice.config;
 
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,7 @@ class HibernateConfigTest {
     }
 
     @Test
+    @PositiveTest
     void sessionFactory_setsGivenDataSource() {
         LocalSessionFactoryBean factory = hibernateConfig.sessionFactory(dataSource);
 
@@ -47,6 +50,7 @@ class HibernateConfigTest {
     }
 
     @Test
+    @PositiveTest
     void sessionFactory_setsEntityPackageToScan() {
         LocalSessionFactoryBean factory = hibernateConfig.sessionFactory(dataSource);
 
@@ -56,6 +60,7 @@ class HibernateConfigTest {
     }
 
     @Test
+    @PositiveTest
     void sessionFactory_populatesHibernatePropertiesFromConfigValues() {
         LocalSessionFactoryBean factory = hibernateConfig.sessionFactory(dataSource);
 
@@ -68,6 +73,7 @@ class HibernateConfigTest {
     }
 
     @Test
+    @PositiveTest
     void sessionFactory_setsSpringSessionContextClass() {
         LocalSessionFactoryBean factory = hibernateConfig.sessionFactory(dataSource);
 
@@ -79,6 +85,7 @@ class HibernateConfigTest {
     }
 
     @Test
+    @EdgeCaseTest
     void sessionFactory_withDifferentConfigValues_reflectsThemInProperties() {
         ReflectionTestUtils.setField(hibernateConfig, "dialect", "org.hibernate.dialect.H2Dialect");
         ReflectionTestUtils.setField(hibernateConfig, "showSql", false);
@@ -95,6 +102,7 @@ class HibernateConfigTest {
     }
 
     @Test
+    @PositiveTest
     void transactionManager_wrapsGivenSessionFactory() {
         SessionFactory sessionFactory = mock(SessionFactory.class);
 

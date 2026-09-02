@@ -6,6 +6,7 @@ import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.TrainingType;
 import com.practice.entity.User;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,7 @@ class UpdateTrainerProfileResponseMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapUpdatedTrainerProfile() {
         User user = User.builder()
                 .userName("john.smith")

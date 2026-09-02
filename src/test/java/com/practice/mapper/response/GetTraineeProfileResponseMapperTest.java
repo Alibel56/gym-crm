@@ -5,6 +5,7 @@ import com.practice.dto.response.TrainerSummaryResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.User;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,7 @@ class GetTraineeProfileResponseMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapTraineeToResponse() {
         LocalDate dateOfBirth = LocalDate.of(2005, 5, 10);
 

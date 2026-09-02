@@ -2,6 +2,7 @@ package com.practice.controller;
 
 import com.practice.dto.request.CreateTrainingRequest;
 import com.practice.service.TrainingService;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,7 @@ class TrainingControllerTest {
     }
 
     @Test
+    @PositiveTest
     void addTraining_shouldCreateTrainingAndReturnOk() {
 
         CreateTrainingRequest request =

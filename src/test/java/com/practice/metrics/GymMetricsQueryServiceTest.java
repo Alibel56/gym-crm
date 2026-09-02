@@ -3,6 +3,8 @@ package com.practice.metrics;
 import com.practice.dao.TraineeRepository;
 import com.practice.entity.Trainee;
 import com.practice.entity.User;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +33,7 @@ class GymMetricsQueryServiceTest {
     }
 
     @Test
+    @PositiveTest
     void countActiveTraineesShouldReturnNumberOfActiveTrainees() {
         Trainee activeTrainee1 = createTrainee(true);
         Trainee activeTrainee2 = createTrainee(true);
@@ -52,6 +55,7 @@ class GymMetricsQueryServiceTest {
     }
 
     @Test
+    @PositiveTest
     void countActiveTraineesShouldIgnoreInactiveTrainees() {
         Trainee inactiveTrainee1 = createTrainee(false);
         Trainee inactiveTrainee2 = createTrainee(false);
@@ -71,6 +75,7 @@ class GymMetricsQueryServiceTest {
     }
 
     @Test
+    @EdgeCaseTest
     void countActiveTraineesShouldIgnoreTraineeWithNullUser() {
         Trainee traineeWithoutUser = new Trainee();
         Trainee activeTrainee = createTrainee(true);
@@ -90,6 +95,7 @@ class GymMetricsQueryServiceTest {
     }
 
     @Test
+    @EdgeCaseTest
     void countActiveTraineesShouldIgnoreTraineeWithNullActiveStatus() {
         Trainee trainee = createTrainee(null);
         Trainee activeTrainee = createTrainee(true);
@@ -109,6 +115,7 @@ class GymMetricsQueryServiceTest {
     }
 
     @Test
+    @EdgeCaseTest
     void countActiveTraineesShouldReturnZeroWhenRepositoryIsEmpty() {
         when(traineeRepository.findAll()).thenReturn(List.of());
 

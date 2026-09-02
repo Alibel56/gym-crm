@@ -1,5 +1,10 @@
 package com.practice.workloadservice.cucumber;
 
+import com.practice.testtags.PositiveTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;

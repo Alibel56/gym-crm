@@ -1,10 +1,9 @@
 package com.practice.dao;
 
-import com.practice.entity.Trainee;
-import com.practice.entity.Trainer;
-import com.practice.entity.Training;
-import com.practice.entity.TrainingType;
-import com.practice.entity.User;
+import com.practice.entity.*;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import com.practice.utility.Criteria;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -25,9 +24,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class TrainingRepositoryTest {
 
@@ -64,6 +61,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void save_shouldPersistTrainingAndReturnIt() {
             Training result = repository.save(training);
 
@@ -72,6 +70,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findById_shouldReturnTraining_whenFound() {
             when(session.find(Training.class, 1L)).thenReturn(training);
 
@@ -81,6 +80,8 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @NegativeTest
+        @EdgeCaseTest
         void findById_shouldReturnEmpty_whenNotFound() {
             when(session.find(Training.class, 1L)).thenReturn(null);
 
@@ -90,6 +91,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAll_shouldReturnListOfTrainings() {
             when(session.createQuery("from Training", Training.class)).thenReturn(query);
             when(query.list()).thenReturn(List.of(training));
@@ -100,6 +102,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @EdgeCaseTest
         void findAll_shouldReturnEmptyList_whenNoTrainings() {
             when(session.createQuery("from Training", Training.class)).thenReturn(query);
             when(query.list()).thenReturn(List.of());
@@ -219,6 +222,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAllTraineeTrainingsByCriteria_shouldReturnAllTraineeTrainings_whenNoFiltersGiven() {
             Criteria criteria = Criteria.builder().build();
 
@@ -231,6 +235,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAllTraineeTrainingsByCriteria_shouldReturnOnlyMatchingTraining_whenAllFiltersApplied() {
             Criteria criteria = Criteria.builder()
                     .trainerName("john.trainer")
@@ -248,6 +253,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAllTraineeTrainingsByCriteria_shouldExcludeTrainingsOutsideDateRange() {
             Criteria criteria = Criteria.builder()
                     .fromDate(LocalDate.of(2026, 2, 1))
@@ -263,6 +269,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAllTrainerTrainingsByCriteria_shouldReturnAllTrainerTrainings_whenNoFiltersGiven() {
             Criteria criteria = Criteria.builder().build();
 
@@ -275,6 +282,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAllTrainerTrainingsByCriteria_shouldReturnOnlyMatchingTraining_whenTraineeNameFilterApplied() {
             Criteria criteria = Criteria.builder()
                     .traineeName("jane.trainee")
@@ -289,6 +297,7 @@ class TrainingRepositoryTest {
         }
 
         @Test
+        @PositiveTest
         void findAllTrainerTrainingsByCriteria_shouldExcludeTrainingsOutsideDateRange() {
             Criteria criteria = Criteria.builder()
                     .fromDate(LocalDate.of(2026, 1, 12))

@@ -1,6 +1,8 @@
 package com.practice.mapper.request;
 
 import com.practice.dto.request.GetTraineeTrainingsListRequest;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import com.practice.utility.Criteria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ class GetTraineeTrainingsListRequestMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapRequestToCriteria() {
         
         LocalDate periodFrom = LocalDate.of(2026, 7, 1);
@@ -46,6 +49,7 @@ class GetTraineeTrainingsListRequestMapperTest {
     }
 
     @Test
+    @EdgeCaseTest
     void mapFrom_shouldAllowNullFilters() {
         
         GetTraineeTrainingsListRequest request =

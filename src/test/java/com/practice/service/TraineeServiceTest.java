@@ -3,17 +3,26 @@ package com.practice.service;
 import com.practice.dao.TraineeRepository;
 import com.practice.dao.TrainerRepository;
 import com.practice.dto.request.*;
-import com.practice.dto.response.*;
+import com.practice.dto.response.GetTraineeProfileResponse;
+import com.practice.dto.response.RegistrationResponse;
+import com.practice.dto.response.TrainerSummaryResponse;
+import com.practice.dto.response.UpdateTraineeProfileResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.Trainer;
 import com.practice.entity.Training;
 import com.practice.entity.User;
 import com.practice.mapper.request.TraineeRegistrationRequestMapper;
-import com.practice.mapper.response.*;
+import com.practice.mapper.response.GetTraineeProfileResponseMapper;
+import com.practice.mapper.response.TraineeRegistrationResponseMapper;
+import com.practice.mapper.response.TrainerSummaryResponseMapper;
+import com.practice.mapper.response.UpdateTraineeProfileResponseMapper;
 import com.practice.messaging.TrainingWorkloadEvent;
 import com.practice.messaging.TrainingWorkloadEventPublisher;
 import com.practice.messaging.WorkloadActionType;
 import com.practice.metrics.GymMetrics;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import com.practice.utility.Credentials;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
@@ -28,7 +37,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,6 +79,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void create_shouldCreateTraineeAndReturnCredentials() {
 
         TraineeRegistrationRequest request = mock(TraineeRegistrationRequest.class);
@@ -112,6 +123,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void update_shouldUpdateTrainee() {
 
         UpdateTraineeProfileRequest request =
@@ -162,6 +174,8 @@ class TraineeServiceTest {
 
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void update_shouldThrowExceptionWhenTraineeNotFound() {
 
         UpdateTraineeProfileRequest request =
@@ -182,6 +196,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void findByUsername_shouldReturnProfile() {
 
         UsernameRequest request =
@@ -209,6 +224,8 @@ class TraineeServiceTest {
 
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void findByUsername_shouldThrowExceptionWhenNotFound() {
 
         UsernameRequest request =
@@ -225,6 +242,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void switchActive_shouldChangeActiveFlag() {
 
         SwitchActiveFlagRequest request =
@@ -249,6 +267,8 @@ class TraineeServiceTest {
 
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void switchActive_shouldThrowExceptionWhenNotFound() {
 
         SwitchActiveFlagRequest request =
@@ -265,6 +285,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void delete_shouldDeleteTraineeAndPublishDeleteEvents() {
 
         UsernameRequest request =
@@ -323,6 +344,8 @@ class TraineeServiceTest {
 
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void delete_shouldThrowExceptionWhenTraineeNotFound() {
 
         UsernameRequest request =
@@ -344,6 +367,8 @@ class TraineeServiceTest {
 
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void delete_shouldThrowExceptionWhenRepositoryDeleteFails() {
 
         UsernameRequest request =
@@ -368,6 +393,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void findById_shouldReturnTrainee() {
 
         Trainee trainee = new Trainee();
@@ -384,6 +410,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnAllTrainees() {
 
         List<Trainee> trainees =
@@ -403,6 +430,7 @@ class TraineeServiceTest {
 
 
     @Test
+    @PositiveTest
     void updateTrainersList_shouldReplaceTrainers() {
 
         UpdateTraineeTrainerListRequest request =
@@ -458,6 +486,8 @@ class TraineeServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void updateTrainersList_shouldThrowWhenTraineeNotFound() {
 
         UpdateTraineeTrainerListRequest request =
@@ -479,6 +509,8 @@ class TraineeServiceTest {
 
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void updateTrainersList_shouldThrowWhenTrainerNotFound() {
 
         UpdateTraineeTrainerListRequest request =

@@ -1,5 +1,7 @@
 package com.practice.security;
 
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,11 +20,13 @@ class TokenBlacklistServiceTest {
     }
 
     @Test
+    @NegativeTest
     void shouldNotConsiderUnknownTokenRevoked() {
         assertThat(service.isRevoked("token-id")).isFalse();
     }
 
     @Test
+    @PositiveTest
     void shouldRevokeToken() {
         String tokenId = "token-id";
         Date expiration = Date.from(Instant.now().plusSeconds(60));
@@ -33,6 +37,7 @@ class TokenBlacklistServiceTest {
     }
 
     @Test
+    @PositiveTest
     void shouldRemoveExpiredToken() {
         String tokenId = "token-id";
         Date expiration = Date.from(Instant.now().minusSeconds(1));
@@ -43,6 +48,7 @@ class TokenBlacklistServiceTest {
     }
 
     @Test
+    @PositiveTest
     void shouldKeepOnlyValidTokensAfterCleanup() {
         service.revoke(
                 "expired",

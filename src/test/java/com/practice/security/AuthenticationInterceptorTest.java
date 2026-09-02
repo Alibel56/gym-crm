@@ -3,6 +3,10 @@ package com.practice.security;
 import com.practice.dto.request.LoginRequest;
 import com.practice.exception.AuthenticationException;
 import com.practice.service.UserService;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +44,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @PositiveTest
     void preHandle_shouldAuthenticateAndReturnTrue_whenCredentialsAreValid() {
         String header = createBasicHeader("john.doe", "password123");
 
@@ -65,6 +70,8 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void preHandle_shouldPropagateAuthenticationException_whenCredentialsAreInvalid() {
         String header = createBasicHeader("john.doe", "wrongPassword");
 
@@ -84,6 +91,9 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenAuthorizationHeaderIsMissing() {
         when(request.getHeader("Authorization")).thenReturn(null);
 
@@ -97,6 +107,8 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenAuthorizationHeaderHasWrongPrefix() {
         when(request.getHeader("Authorization"))
                 .thenReturn("Bearer some-token");
@@ -111,6 +123,9 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenEncodedCredentialsAreEmpty() {
         when(request.getHeader("Authorization"))
                 .thenReturn("Basic ");
@@ -125,6 +140,8 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenBase64IsInvalid() {
         when(request.getHeader("Authorization"))
                 .thenReturn("Basic invalid-base64%%%");
@@ -139,6 +156,8 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenDecodedCredentialsHaveNoSeparator() {
         String encoded = Base64.getEncoder()
                 .encodeToString(
@@ -159,6 +178,9 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenUsernameIsEmpty() {
         String header = createBasicHeader("", "password123");
 
@@ -174,6 +196,9 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void preHandle_shouldThrowException_whenPasswordIsEmpty() {
         String header = createBasicHeader("john.doe", "");
 
@@ -189,6 +214,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    @PositiveTest
     void preHandle_shouldCorrectlyParsePasswordContainingColon() {
         String header = createBasicHeader(
                 "john.doe",

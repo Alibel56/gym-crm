@@ -1,5 +1,10 @@
 package com.practice.workloadservice.messaging;
 
+import com.practice.testtags.PositiveTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.practice.workloadservice.dto.ActionType;
 import com.practice.workloadservice.dto.TrainerWorkloadRequest;
@@ -49,6 +54,7 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @PositiveTest
     void receive_shouldProcessValidMessage() throws Exception {
         String transactionId = UUID.randomUUID().toString();
 
@@ -88,6 +94,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldGenerateTransactionId_whenPropertyMissing()
             throws Exception {
 
@@ -113,6 +121,7 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @EdgeCaseTest
     void receive_shouldGenerateTransactionId_whenPropertyBlank()
             throws Exception {
 
@@ -138,6 +147,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void receive_shouldThrowException_whenMessageIsNotTextMessage()
             throws Exception {
 
@@ -160,6 +171,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void receive_shouldThrowException_whenJsonIsInvalid()
             throws Exception {
 
@@ -190,6 +203,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullTrainerUsername()
             throws Exception {
 
@@ -208,6 +223,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectBlankTrainerUsername()
             throws Exception {
 
@@ -226,6 +243,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullFirstName()
             throws Exception {
 
@@ -244,6 +263,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectBlankFirstName()
             throws Exception {
 
@@ -262,6 +283,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullLastName()
             throws Exception {
 
@@ -280,6 +303,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectBlankLastName()
             throws Exception {
 
@@ -298,6 +323,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullIsActive()
             throws Exception {
 
@@ -316,6 +343,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullTrainingDate()
             throws Exception {
 
@@ -334,6 +363,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullTrainingDuration()
             throws Exception {
 
@@ -352,6 +383,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectZeroTrainingDuration()
             throws Exception {
 
@@ -370,6 +403,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNegativeTrainingDuration()
             throws Exception {
 
@@ -388,6 +423,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void receive_shouldRejectNullActionType()
             throws Exception {
 
@@ -406,6 +443,7 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
     void receive_shouldNotCallService_whenValidationFails()
             throws Exception {
 
@@ -441,6 +479,7 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @PositiveTest
     void receive_shouldRemoveMdcAfterSuccessfulProcessing()
             throws Exception {
 
@@ -462,6 +501,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void receive_shouldRemoveMdcWhenExceptionOccurs()
             throws Exception {
 
@@ -486,6 +527,8 @@ class TrainingWorkloadListenerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void receive_shouldPropagateJmsExceptionFromGetText()
             throws Exception {
 

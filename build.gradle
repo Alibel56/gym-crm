@@ -76,5 +76,18 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        def includeTagsProperty = System.getProperty('includeTags')
+
+        if (includeTagsProperty) {
+            includeTags(*includeTagsProperty.split(',')*.trim().findAll { it })
+        }
+    }
+
+    if (System.getProperty('includeTags')) {
+        exclude '**/RunCucumberTest.class'
+    }
+}
+tasks.register('allTests') {
+    dependsOn 'test', ':workload-service:test', ':discovery-service:test'
 }

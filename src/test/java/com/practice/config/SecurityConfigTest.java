@@ -1,5 +1,6 @@
 package com.practice.config;
 
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -19,6 +20,7 @@ class SecurityConfigTest {
     }
 
     @Test
+    @PositiveTest
     void passwordEncoderShouldEncodeAndMatchPassword() {
         PasswordEncoder encoder = securityConfig.passwordEncoder();
 
@@ -31,6 +33,7 @@ class SecurityConfigTest {
     }
 
     @Test
+    @PositiveTest
     void corsConfigurationShouldBeConfiguredCorrectly() {
         CorsConfigurationSource source =
                 securityConfig.corsConfigurationSource(

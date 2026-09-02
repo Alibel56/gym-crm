@@ -3,6 +3,7 @@ package com.practice.mapper.response;
 import com.practice.dto.response.TraineeSummaryResponse;
 import com.practice.entity.Trainee;
 import com.practice.entity.User;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,7 @@ class TraineeSummaryResponseMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapTraineeSummary() {
         User user = User.builder()
                 .userName("alibek.aglanov")

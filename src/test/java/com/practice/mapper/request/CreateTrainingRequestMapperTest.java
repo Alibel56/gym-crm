@@ -2,6 +2,7 @@ package com.practice.mapper.request;
 
 import com.practice.dto.request.CreateTrainingRequest;
 import com.practice.entity.Training;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +20,7 @@ class CreateTrainingRequestMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapRequestToTraining() {
         
         CreateTrainingRequest request = new CreateTrainingRequest(

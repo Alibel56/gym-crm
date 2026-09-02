@@ -3,6 +3,7 @@ package com.practice.controller;
 import com.practice.dto.response.GetTrainingTypesResponse;
 import com.practice.dto.response.TrainingTypesSummaryResponse;
 import com.practice.service.TrainingTypeService;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ class TrainingTypeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void getTrainingTypes_shouldReturnTrainingTypes() {
 
         TrainingTypesSummaryResponse first =

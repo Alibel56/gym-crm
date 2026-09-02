@@ -2,6 +2,10 @@ package com.practice.dao;
 
 import com.practice.entity.Trainer;
 import com.practice.entity.User;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -56,6 +60,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void save_shouldPersistTrainerAndReturnIt() {
         Trainer result = repository.save(trainer);
 
@@ -64,6 +69,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findById_shouldReturnTrainer_whenFound() {
         when(session.find(Trainer.class, 1L)).thenReturn(trainer);
 
@@ -73,6 +79,8 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void findById_shouldReturnEmpty_whenNotFound() {
         when(session.find(Trainer.class, 1L)).thenReturn(null);
 
@@ -82,6 +90,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnListOfTrainers() {
         List<Trainer> trainers = List.of(trainer);
         when(session.createQuery("from Trainer", Trainer.class)).thenReturn(query);
@@ -93,6 +102,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findAll_shouldReturnEmptyList_whenNoTrainers() {
         when(session.createQuery("from Trainer", Trainer.class)).thenReturn(query);
         when(query.list()).thenReturn(List.of());
@@ -103,6 +113,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findByUsername_shouldReturnTrainer_whenFound() {
         when(session.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
         when(query.setParameter("username", "jane.smith")).thenReturn(query);
@@ -114,6 +125,8 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void findByUsername_shouldReturnEmpty_whenNotFound() {
         when(session.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
         when(query.setParameter("username", "unknown")).thenReturn(query);
@@ -125,6 +138,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findAllNotAssignedByTraineeUserName_shouldReturnUnassignedTrainers() {
         List<Trainer> unassigned = List.of(trainer);
         when(session.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
@@ -137,6 +151,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findAllNotAssignedByTraineeUserName_shouldReturnEmptyList_whenAllTrainersAssigned() {
         when(session.createQuery(anyString(), eq(Trainer.class))).thenReturn(query);
         when(query.setParameter("username", "john.doe")).thenReturn(query);
@@ -148,6 +163,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void switchActive_shouldToggleActiveStatus_whenFound() {
         when(session.find(Trainer.class, 1L)).thenReturn(trainer);
         boolean before = user.getIsActive();
@@ -158,6 +174,8 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void switchActive_shouldThrowException_whenNotFound() {
         when(session.find(Trainer.class, 1L)).thenReturn(null);
 
@@ -166,6 +184,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void isActive_shouldReturnTrue_whenTrainerIsActive() {
         when(session.find(Trainer.class, 1L)).thenReturn(trainer);
 
@@ -175,6 +194,7 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void isActive_shouldReturnFalse_whenTrainerIsInactive() {
         user.setIsActive(false);
         when(session.find(Trainer.class, 1L)).thenReturn(trainer);
@@ -185,6 +205,8 @@ class TrainerRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void isActive_shouldThrowException_whenNotFound() {
         when(session.find(Trainer.class, 1L)).thenReturn(null);
 

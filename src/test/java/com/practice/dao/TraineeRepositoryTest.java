@@ -2,6 +2,10 @@ package com.practice.dao;
 
 import com.practice.entity.Trainee;
 import com.practice.entity.User;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import jakarta.persistence.EntityNotFoundException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -55,6 +59,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void save_shouldPersistTraineeAndReturnIt() {
         Trainee result = repository.save(trainee);
 
@@ -63,6 +68,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findById_shouldReturnTrainee_whenFound() {
         when(session.find(Trainee.class, 1L)).thenReturn(trainee);
 
@@ -72,6 +78,8 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void findById_shouldReturnEmpty_whenNotFound() {
         when(session.find(Trainee.class, 1L)).thenReturn(null);
 
@@ -81,6 +89,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findByUsername_shouldReturnTrainee_whenFound() {
         when(session.createQuery(anyString(), eq(Trainee.class))).thenReturn(query);
         when(query.setParameter("username", "john.doe")).thenReturn(query);
@@ -92,6 +101,8 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void findByUsername_shouldReturnEmpty_whenNotFound() {
         when(session.createQuery(anyString(), eq(Trainee.class))).thenReturn(query);
         when(query.setParameter("username", "unknown")).thenReturn(query);
@@ -103,6 +114,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnListOfTrainees() {
         List<Trainee> trainees = List.of(trainee);
         when(session.createQuery("from Trainee", Trainee.class)).thenReturn(query);
@@ -114,6 +126,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @EdgeCaseTest
     void findAll_shouldReturnEmptyList_whenNoTrainees() {
         when(session.createQuery("from Trainee", Trainee.class)).thenReturn(query);
         when(query.list()).thenReturn(List.of());
@@ -124,6 +137,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void delete_shouldRemoveTraineeAndReturnTrue_whenFound() {
         when(session.createQuery(anyString(), eq(Trainee.class))).thenReturn(query);
         when(query.setParameter("username", "john.doe")).thenReturn(query);
@@ -136,6 +150,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @NegativeTest
     void delete_shouldReturnFalseAndNotRemove_whenNotFound() {
         when(session.createQuery(anyString(), eq(Trainee.class))).thenReturn(query);
         when(query.setParameter("username", "unknown")).thenReturn(query);
@@ -148,6 +163,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void isActive_shouldReturnTrue_whenTraineeIsActive() {
         when(session.find(Trainee.class, 1L)).thenReturn(trainee);
 
@@ -157,6 +173,7 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @PositiveTest
     void isActive_shouldReturnFalse_whenTraineeIsInactive() {
         user.setIsActive(false);
         when(session.find(Trainee.class, 1L)).thenReturn(trainee);
@@ -167,6 +184,8 @@ class TraineeRepositoryTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void isActive_shouldThrowException_whenNotFound() {
         when(session.find(Trainee.class, 1L)).thenReturn(null);
 

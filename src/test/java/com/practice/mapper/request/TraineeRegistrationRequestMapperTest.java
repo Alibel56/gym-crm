@@ -2,6 +2,8 @@ package com.practice.mapper.request;
 
 import com.practice.dto.request.TraineeRegistrationRequest;
 import com.practice.entity.Trainee;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +21,7 @@ class TraineeRegistrationRequestMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapRequestToTrainee() {
         
         LocalDate dateOfBirth = LocalDate.of(2005, 5, 10);
@@ -52,6 +55,7 @@ class TraineeRegistrationRequestMapperTest {
     }
 
     @Test
+    @EdgeCaseTest
     void mapFrom_shouldAllowOptionalFieldsToBeNull() {
         
         TraineeRegistrationRequest request =

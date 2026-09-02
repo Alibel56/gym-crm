@@ -1,8 +1,9 @@
 package com.practice.utility;
 
 import com.practice.entity.User;
-import org.junit.jupiter.api.Test;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -16,6 +17,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_noExistingUsers_returnsBaseUsername() {
         String result = ServiceUtility.generateUserName("John", "Doe", List.of());
 
@@ -23,6 +25,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_noCollision_returnsBaseUsername() {
         List<User> existing = List.of(buildUser("Jane.Smith"), buildUser("Bob.Brown"));
 
@@ -32,6 +35,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_baseUsernameTaken_appendsCounterOne() {
         List<User> existing = List.of(buildUser("John.Doe"));
 
@@ -41,6 +45,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_baseAndFirstSuffixTaken_appendsCounterTwo() {
         List<User> existing = List.of(buildUser("John.Doe"), buildUser("John.Doe1"));
 
@@ -50,6 +55,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_severalSuffixesTaken_skipsAllOfThem() {
         List<User> existing = List.of(
                 buildUser("John.Doe"),
@@ -64,6 +70,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_gapInSuffixSequence_stillReturnsFirstFreeSlot() {
         List<User> existing = List.of(buildUser("John.Doe"), buildUser("John.Doe2"));
 
@@ -73,6 +80,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generateUserName_unrelatedExistingUsernames_returnsBaseUsername() {
         List<User> existing = List.of(buildUser("Alice.Wonder"), buildUser("Mark.Twain"));
 
@@ -82,6 +90,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generatePassword_returnsStringOfLengthTen() {
         String password = ServiceUtility.generatePassword();
 
@@ -89,6 +98,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generatePassword_containsNoHyphens() {
         String password = ServiceUtility.generatePassword();
 
@@ -96,6 +106,7 @@ class ServiceUtilityTest {
     }
 
     @Test
+    @PositiveTest
     void generatePassword_containsOnlyHexCharacters() {
         String password = ServiceUtility.generatePassword();
 
@@ -104,6 +115,7 @@ class ServiceUtilityTest {
     }
 
     @RepeatedTest(20)
+    @PositiveTest
     void generatePassword_repeatedCalls_produceDifferentValues() {
         String first = ServiceUtility.generatePassword();
         String second = ServiceUtility.generatePassword();

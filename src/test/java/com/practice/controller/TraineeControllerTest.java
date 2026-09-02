@@ -8,6 +8,8 @@ import com.practice.dto.response.UpdateTraineeProfileResponse;
 import com.practice.service.TraineeService;
 import com.practice.service.TrainerService;
 import com.practice.service.TrainingService;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +48,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void getProfile_shouldReturnTraineeProfile() {
         
         GetTraineeProfileResponse expectedResponse =
@@ -72,6 +75,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void updateProfile_shouldReturnUpdatedProfile() {
         
         UpdateTraineeProfileRequest request =
@@ -99,6 +103,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void deleteProfile_shouldDeleteTraineeAndReturnOk() {
         
         ResponseEntity<Void> response =
@@ -117,6 +122,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void switchActive_shouldCallServiceAndReturnOk() {
         
         SwitchActiveFlagRequest request =
@@ -140,6 +146,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void getUnassignedTrainers_shouldReturnTrainerSummaries() {
         
         TrainerSummaryResponse firstResponse =
@@ -174,6 +181,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void updateTrainersList_shouldReturnUpdatedTrainerList() {
         
         UpdateTraineeTrainerListRequest request =
@@ -207,6 +215,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @PositiveTest
     void getTrainings_shouldCreateRequestAndReturnTrainings() {
         
         LocalDate periodFrom = LocalDate.of(2026, 1, 1);
@@ -271,6 +280,7 @@ class TraineeControllerTest {
     }
 
     @Test
+    @EdgeCaseTest
     void getTrainings_shouldSupportNullOptionalFilters() {
         
         when(trainingService.findAllTraineeTrainings(

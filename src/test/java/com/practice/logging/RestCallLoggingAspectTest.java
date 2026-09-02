@@ -1,5 +1,8 @@
 package com.practice.logging;
 
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.Signature;
@@ -12,7 +15,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +39,7 @@ class RestCallLoggingAspectTest {
     }
 
     @Test
+    @PositiveTest
     void logRestCall_shouldReturnResult() throws Throwable {
 
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -54,6 +59,8 @@ class RestCallLoggingAspectTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void logRestCall_shouldRethrowException() throws Throwable {
 
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -74,6 +81,7 @@ class RestCallLoggingAspectTest {
     }
 
     @Test
+    @PositiveTest
     void logRestCall_shouldIgnoreHttpServletRequestArgument() throws Throwable {
 
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -98,6 +106,7 @@ class RestCallLoggingAspectTest {
     }
 
     @Test
+    @PositiveTest
     void logRestCall_shouldWorkWithoutRequestContext() throws Throwable {
 
         RequestContextHolder.resetRequestAttributes();

@@ -19,6 +19,9 @@ import com.practice.mapper.response.GetTraineeTrainingsListResponseMapper;
 import com.practice.mapper.response.GetTrainerTrainingsListResponseMapper;
 import com.practice.messaging.TrainingWorkloadEventPublisher;
 import com.practice.metrics.GymMetrics;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import com.practice.utility.Criteria;
 import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.EntityNotFoundException;
@@ -105,6 +108,7 @@ class TrainingServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findById_shouldReturnTraining() {
 
         Training training = mock(Training.class);
@@ -124,6 +128,7 @@ class TrainingServiceTest {
 
 
     @Test
+    @PositiveTest
     void findAll_shouldReturnTrainings() {
 
         Training training1 = mock(Training.class);
@@ -144,6 +149,7 @@ class TrainingServiceTest {
     }
 
     @Test
+    @PositiveTest
     void create_shouldCreateTraining() {
 
         CreateTrainingRequest request =
@@ -232,6 +238,8 @@ class TrainingServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void create_shouldThrowExceptionWhenTrainerNotFound() {
 
         CreateTrainingRequest request =
@@ -262,6 +270,8 @@ class TrainingServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void create_shouldThrowExceptionWhenTraineeNotFound() {
 
         CreateTrainingRequest request =
@@ -299,6 +309,7 @@ class TrainingServiceTest {
 
 
     @Test
+    @PositiveTest
     void delete_shouldDeleteTraining() {
 
         Training training = mock(Training.class);
@@ -353,6 +364,8 @@ class TrainingServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void delete_shouldThrowExceptionWhenTrainingNotFound() {
 
         when(trainingRepository.findById(1L))
@@ -371,6 +384,7 @@ class TrainingServiceTest {
     }
 
     @Test
+    @PositiveTest
     void findAllTraineeTrainings_shouldReturnResponses() {
 
         GetTraineeTrainingsListRequest request =
@@ -417,6 +431,7 @@ class TrainingServiceTest {
 
 
     @Test
+    @PositiveTest
     void findAllTrainerTrainings_shouldReturnResponses() {
 
         GetTrainerTrainingsListRequest request =

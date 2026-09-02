@@ -1,5 +1,7 @@
 package com.practice.exception;
 
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void authenticationException_mapsTo401() {
         ResponseEntity<ErrorResponse> response = handler.handleAuthentication(
                 new AuthenticationException("Invalid username or password"), request);
@@ -37,6 +41,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void entityNotFoundException_mapsTo404() {
         ResponseEntity<ErrorResponse> response = handler.handleNotFound(
                 new EntityNotFoundException("Trainee John.Doe not found"), request);
@@ -46,6 +52,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void validationException_mapsTo400() {
         ResponseEntity<ErrorResponse> response = handler.handleValidation(
                 new ValidationException("firstName is required"), request);
@@ -54,6 +62,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void illegalArgumentException_mapsTo400() {
         ResponseEntity<ErrorResponse> response = handler.handleIllegalArgument(
                 new IllegalArgumentException("TrainingType with id 99 does not exist"), request);
@@ -62,6 +72,8 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void unexpectedException_mapsTo500() {
         ResponseEntity<ErrorResponse> response = handler.handleUnexpected(
                 new RuntimeException("boom"), request);

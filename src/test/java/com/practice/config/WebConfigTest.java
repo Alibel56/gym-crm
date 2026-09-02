@@ -2,6 +2,9 @@ package com.practice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -14,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WebConfigTest {
 
     @Test
+    @PositiveTest
     void extendMessageConvertersShouldAddJacksonConverterWithJavaTimeModule() {
         WebConfig webConfig = new WebConfig();
 
@@ -35,6 +39,8 @@ class WebConfigTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void setAuthenticationInterceptorShouldNotThrowException() {
         WebConfig webConfig = new WebConfig();
 

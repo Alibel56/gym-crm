@@ -10,6 +10,10 @@ import com.practice.metrics.GymMetrics;
 import com.practice.security.BruteForceProtectionService;
 import com.practice.security.JwtService;
 import com.practice.security.TokenBlacklistService;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.PositiveTest;
 import com.practice.utility.Credentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +31,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -73,6 +78,7 @@ class UserServiceTest {
     }
 
     @Test
+    @PositiveTest
     void encodePasswordShouldReturnEncodedPassword() {
         when(passwordEncoder.encode("password"))
                 .thenReturn("encoded-password");
@@ -85,6 +91,7 @@ class UserServiceTest {
     }
 
     @Test
+    @PositiveTest
     void authenticateShouldReturnUserForValidCredentials() {
         LoginRequest request = mock(LoginRequest.class);
 
@@ -105,6 +112,8 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void authenticateShouldThrowWhenUserNotFound() {
         LoginRequest request = mock(LoginRequest.class);
 
@@ -121,6 +130,8 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void authenticateShouldThrowWhenPasswordIsIncorrect() {
         LoginRequest request = mock(LoginRequest.class);
 
@@ -142,6 +153,7 @@ class UserServiceTest {
     }
 
     @Test
+    @PositiveTest
     void loginShouldReturnJwtTokenForValidCredentials() {
         LoginRequest request = mock(LoginRequest.class);
         UserDetails principal = mock(UserDetails.class);
@@ -178,6 +190,8 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void loginShouldThrowWhenUserIsBlocked() {
         LoginRequest request = mock(LoginRequest.class);
 
@@ -197,6 +211,7 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
     void loginShouldRecordFailedAttemptWhenAuthenticationFails() {
         LoginRequest request = mock(LoginRequest.class);
 
@@ -221,6 +236,7 @@ class UserServiceTest {
     }
 
     @Test
+    @PositiveTest
     void changePasswordShouldEncodeAndSetNewPassword() {
         UpdateLoginRequest request = mock(UpdateLoginRequest.class);
 
@@ -251,6 +267,8 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void changePasswordShouldThrowWhenOldPasswordIsIncorrect() {
         UpdateLoginRequest request = mock(UpdateLoginRequest.class);
 
@@ -276,6 +294,7 @@ class UserServiceTest {
     }
 
     @Test
+    @PositiveTest
     void logoutShouldRevokeToken() {
         String authorizationHeader = "Bearer jwt-token";
         Date expiration = Date.from(
@@ -294,6 +313,9 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
+    @ExceptionTest
     void logoutShouldThrowWhenHeaderIsMissing() {
         assertThatThrownBy(() -> userService.logout(null))
                 .isInstanceOf(AuthenticationException.class)
@@ -305,6 +327,8 @@ class UserServiceTest {
     }
 
     @Test
+    @NegativeTest
+    @ExceptionTest
     void logoutShouldThrowWhenHeaderIsMalformed() {
         assertThatThrownBy(() ->
                 userService.logout("Basic credentials")
@@ -318,6 +342,7 @@ class UserServiceTest {
     }
 
     @Test
+    @PositiveTest
     void generateCredentialsShouldGenerateUsernameAndPassword() {
         User existingUser = new User();
         existingUser.setUserName("john.smith");

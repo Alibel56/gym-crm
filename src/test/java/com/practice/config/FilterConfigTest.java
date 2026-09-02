@@ -1,6 +1,7 @@
 package com.practice.config;
 
 import com.practice.logging.TransactionIdFilter;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
@@ -11,6 +12,7 @@ class FilterConfigTest {
     private final FilterConfig filterConfig = new FilterConfig();
 
     @Test
+    @PositiveTest
     void transactionIdFilter_registersTransactionIdFilterInstance() {
         FilterRegistrationBean<TransactionIdFilter> registration = filterConfig.transactionIdFilter();
 
@@ -18,6 +20,7 @@ class FilterConfigTest {
     }
 
     @Test
+    @PositiveTest
     void transactionIdFilter_isMappedToAllUrls() {
         FilterRegistrationBean<TransactionIdFilter> registration = filterConfig.transactionIdFilter();
 
@@ -25,6 +28,7 @@ class FilterConfigTest {
     }
 
     @Test
+    @PositiveTest
     void transactionIdFilter_hasNameAndOrderConfigured() {
         FilterRegistrationBean<TransactionIdFilter> registration = filterConfig.transactionIdFilter();
 

@@ -2,6 +2,8 @@ package com.practice.config;
 
 import com.practice.dao.TrainingTypeRepository;
 import com.practice.entity.TrainingType;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +31,7 @@ class DataInitializerTest {
     }
 
     @Test
+    @PositiveTest
     void init_shouldNotSaveTrainingTypes_whenTrainingTypesAlreadyExist() {
         TrainingType existingTrainingType = TrainingType.builder()
                 .name("Fitness")
@@ -45,6 +48,7 @@ class DataInitializerTest {
     }
 
     @Test
+    @EdgeCaseTest
     void init_shouldSaveDefaultTrainingTypes_whenRepositoryIsEmpty() {
         when(trainingTypeRepository.findAll()).thenReturn(List.of());
 

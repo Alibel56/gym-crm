@@ -9,6 +9,7 @@ import com.practice.dto.response.RegistrationResponse;
 import com.practice.service.TraineeService;
 import com.practice.service.TrainerService;
 import com.practice.service.UserService;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @PositiveTest
     void registerTraineeShouldReturnRegistrationResponse() {
         TraineeRegistrationRequest request =
                 mock(TraineeRegistrationRequest.class);
@@ -64,6 +66,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @PositiveTest
     void registerTrainerShouldReturnRegistrationResponse() {
         TrainerRegistrationRequest request =
                 mock(TrainerRegistrationRequest.class);
@@ -85,6 +88,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @PositiveTest
     void loginShouldReturnLoginResponse() {
         LoginRequest request = mock(LoginRequest.class);
         LoginResponse expectedResponse = mock(LoginResponse.class);
@@ -103,6 +107,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @PositiveTest
     void changePasswordShouldReturnOk() {
         UpdateLoginRequest request =
                 mock(UpdateLoginRequest.class);
@@ -118,6 +123,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @PositiveTest
     void logoutShouldReturnNoContent() {
         String authorizationHeader = "Bearer test-token";
 

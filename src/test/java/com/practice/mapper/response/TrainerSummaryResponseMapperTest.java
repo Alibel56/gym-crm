@@ -4,6 +4,7 @@ import com.practice.dto.response.TrainerSummaryResponse;
 import com.practice.entity.Trainer;
 import com.practice.entity.TrainingType;
 import com.practice.entity.User;
+import com.practice.testtags.PositiveTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +20,7 @@ class TrainerSummaryResponseMapperTest {
     }
 
     @Test
+    @PositiveTest
     void mapFrom_shouldMapTrainerSummary() {
         User user = User.builder()
                 .userName("john.smith")

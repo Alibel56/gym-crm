@@ -1,5 +1,10 @@
 package com.practice.workloadservice.repository;
 
+import com.practice.testtags.PositiveTest;
+import com.practice.testtags.NegativeTest;
+import com.practice.testtags.EdgeCaseTest;
+import com.practice.testtags.ExceptionTest;
+
 import com.practice.workloadservice.model.TrainerWorkloadDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +35,7 @@ class TrainerWorkloadDocumentRepositoryImplTest {
     }
 
     @Test
+    @PositiveTest
     void findByUsername_shouldReturnDocument_whenDocumentExists() {
         // Arrange
         String username = "john.doe";
@@ -54,6 +60,8 @@ class TrainerWorkloadDocumentRepositoryImplTest {
     }
 
     @Test
+    @NegativeTest
+    @EdgeCaseTest
     void findByUsername_shouldReturnEmpty_whenDocumentDoesNotExist() {
         // Arrange
         String username = "unknown";
@@ -77,6 +85,7 @@ class TrainerWorkloadDocumentRepositoryImplTest {
     }
 
     @Test
+    @PositiveTest
     void save_shouldReturnSavedDocument() {
         // Arrange
         when(document.getTrainerUsername()).thenReturn("john.doe");
