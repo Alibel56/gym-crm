@@ -10,6 +10,7 @@ public class GetTraineeTrainingsListResponseMapper implements Mapper<Training, G
     @Override
     public GetTraineeTrainingsListResponse mapFrom(Training object) {
         return GetTraineeTrainingsListResponse.builder()
+                .id(object.getId())
                 .trainingName(object.getTrainingName())
                 .trainingDate(object.getTrainingDate())
                 .trainingType(object.getTrainingType().getName())

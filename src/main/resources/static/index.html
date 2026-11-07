@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gym CRM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============ AUTH ============ -->
+<div class="auth" id="auth">
+    <div class="box">
+        <div class="logo" style="padding:0 0 18px">GYM<span>CRM</span></div>
+
+        <div class="tabs">
+            <button type="button" class="active" data-auth="login">Вход</button>
+            <button type="button" data-auth="trainee">Я — Trainee</button>
+            <button type="button" data-auth="trainer">Я — Trainer</button>
+        </div>
+
+        <form id="form-login" class="auth-form">
+            <div class="field"><label>Username</label><input name="userName" placeholder="John.Doe" autocomplete="username" required></div>
+            <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" required></div>
+            <button class="btn full">Войти</button>
+        </form>
+
+        <form id="form-reg-trainee" class="auth-form hidden">
+            <div class="row gap">
+                <div class="field"><label>First name</label><input name="firstName" required></div>
+                <div class="field"><label>Last name</label><input name="lastName" required></div>
+            </div>
+            <div class="field"><label>Date of birth</label><input name="dateOfBirth" type="date"></div>
+            <div class="field"><label>Address</label><input name="address"></div>
+            <button class="btn full">Зарегистрироваться</button>
+        </form>
+
+        <form id="form-reg-trainer" class="auth-form hidden">
+            <div class="row gap">
+                <div class="field"><label>First name</label><input name="firstName" required></div>
+                <div class="field"><label>Last name</label><input name="lastName" required></div>
+            </div>
+            <div class="field">
+                <label>Specialization</label>
+                <select name="specializationId" id="reg-spec" required></select>
+                <input name="specializationId" id="reg-spec-num" type="number" min="1" placeholder="ID типа тренировки" class="hidden" disabled>
+            </div>
+            <button class="btn full">Зарегистрироваться</button>
+        </form>
+
+        <!-- результат регистрации: пароль показывается один раз -->
+        <div id="reg-result" class="reg-result hidden">
+            <strong>Аккаунт создан</strong>
+            <p class="muted">Сохраните данные — пароль больше нигде не отображается.</p>
+            <div class="cred"><span>Username</span><code id="rr-user"></code></div>
+            <div class="cred"><span>Password</span><code id="rr-pass"></code></div>
+            <div class="row gap" style="margin-top:12px">
+                <button type="button" class="btn small" id="rr-login">Войти с этими данными</button>
+                <button type="button" class="btn secondary small" id="rr-copy">Скопировать</button>
+            </div>
+        </div>
+
+        <div id="auth-error" class="inline-error hidden"></div>
+    </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="app hidden" id="app">
+    <aside class="sidebar">
+        <div class="logo">GYM<span>CRM</span></div>
+        <button class="nav-btn active" data-page="dashboard">Обзор</button>
+        <button class="nav-btn" data-page="profile">Профиль</button>
+        <button class="nav-btn" data-page="trainings">Тренировки</button>
+        <button class="nav-btn trainee-only" data-page="trainers">Мои тренеры</button>
+        <button class="nav-btn trainer-only" data-page="trainees">Мои подопечные</button>
+        <button class="nav-btn" data-page="add-training">Новая тренировка</button>
+        <button class="nav-btn" data-page="security">Пароль</button>
+
+        <div class="user-box">
+            <small id="me-role">—</small>
+            <strong id="me-name">—</strong>
+            <div style="margin-top:10px"><button class="btn secondary small" id="logout">Выйти</button></div>
+        </div>
+    </aside>
+
+    <main>
+        <section class="page visible" id="page-dashboard">
+            <h1>Обзор</h1>
+            <p class="subtitle">Краткая сводка по вашему аккаунту</p>
+            <div class="grid three">
+                <div class="card stat"><div class="num" id="st-trainings">0</div><div class="lbl">Тренировок</div></div>
+                <div class="card stat"><div class="num" id="st-partners">0</div><div class="lbl" id="st-partners-lbl">Тренеров</div></div>
+                <div class="card stat"><div class="num" id="st-status">—</div><div class="lbl">Статус</div></div>
+            </div>
+        </section>
+
+        <section class="page" id="page-profile">
+            <h1>Профиль</h1>
+            <p class="subtitle">Данные и статус аккаунта</p>
+            <div class="card">
+                <form id="form-profile">
+                    <div class="grid two">
+                        <div class="field"><label>Username</label><input id="pf-username" disabled></div>
+                        <div class="field trainer-only"><label>Specialization</label><input id="pf-spec" disabled></div>
+                        <div class="field"><label>First name</label><input name="firstName" required></div>
+                        <div class="field"><label>Last name</label><input name="lastName" required></div>
+                        <div class="field trainee-only"><label>Date of birth</label><input name="dateOfBirth" type="date"></div>
+                        <div class="field trainee-only"><label>Address</label><input name="address"></div>
+                    </div>
+                    <label class="checkbox" style="margin-bottom:16px">
+                        <input type="checkbox" name="isActive"> Аккаунт активен
+                    </label>
+                    <div class="row gap">
+                        <button class="btn">Сохранить</button>
+                        <button type="button" class="btn danger trainee-only" id="delete-profile">Удалить профиль</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="page" id="page-trainings">
+            <h1>Тренировки</h1>
+            <p class="subtitle">История и фильтры</p>
+            <div class="card">
+                <form id="form-filter" class="row gap">
+                    <div class="field"><label>С даты</label><input type="date" name="periodFrom"></div>
+                    <div class="field"><label>По дату</label><input type="date" name="periodTo"></div>
+                    <div class="field"><label id="flt-partner-lbl">Username партнёра</label><input name="partner" placeholder="Ivan.Petrov"></div>
+                    <div class="field trainee-only">
+                        <label>Тип</label>
+                        <select name="trainingType" id="flt-type"></select>
+                    </div>
+                    <button class="btn">Найти</button>
+                    <button type="button" class="btn secondary" id="flt-reset">Сбросить</button>
+                </form>
+            </div>
+            <div class="card table-wrap">
+                <table>
+                    <thead><tr><th>Название</th><th>Дата</th><th>Тип</th><th>Длит., мин</th><th id="th-partner">Партнёр</th><th></th></tr></thead>
+                    <tbody id="trainings-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="page" id="page-trainers">
+            <h1>Мои тренеры</h1>
+            <p class="subtitle">Отметьте тренеров, которые должны быть за вами закреплены. Сохранение заменяет список целиком, минимум один тренер.</p>
+            <div class="card">
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th></th><th>Username</th><th>Имя</th><th>Специализация</th></tr></thead>
+                        <tbody id="trainers-body"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:16px"><button class="btn" id="save-trainers">Сохранить список</button></div>
+            </div>
+        </section>
+
+        <section class="page" id="page-trainees">
+            <h1>Мои подопечные</h1>
+            <p class="subtitle">Trainee, у которых вы назначены тренером</p>
+            <div class="card table-wrap">
+                <table>
+                    <thead><tr><th>Username</th><th>Имя</th></tr></thead>
+                    <tbody id="trainees-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="page" id="page-add-training">
+            <h1>Новая тренировка</h1>
+            <p class="subtitle">Тип тренировки берётся из специализации тренера</p>
+            <div class="card">
+                <form id="form-training">
+                    <div class="grid two">
+                        <div class="field"><label>Trainee username</label><input name="traineeUserName" list="dl-trainees" required></div>
+                        <div class="field"><label>Trainer username</label><input name="trainerUserName" list="dl-trainers" required></div>
+                        <div class="field"><label>Название</label><input name="trainingName" required></div>
+                        <div class="field"><label>Дата</label><input type="date" name="trainingDate" required></div>
+                        <div class="field"><label>Длительность (мин)</label><input type="number" min="1" name="trainingDuration" value="60" required></div>
+                    </div>
+                    <datalist id="dl-trainees"></datalist>
+                    <datalist id="dl-trainers"></datalist>
+                    <button class="btn">Создать</button>
+                </form>
+            </div>
+        </section>
+
+        <section class="page" id="page-security">
+            <h1>Смена пароля</h1>
+            <p class="subtitle">Укажите старый и новый пароль</p>
+            <div class="card" style="max-width:460px">
+                <form id="form-password">
+                    <div class="field"><label>Старый пароль</label><input type="password" name="oldPassword" autocomplete="current-password" required></div>
+                    <div class="field"><label>Новый пароль</label><input type="password" name="newPassword" autocomplete="new-password" required></div>
+                    <button class="btn">Изменить</button>
+                </form>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

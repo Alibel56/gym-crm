@@ -64,6 +64,9 @@ public class SecurityConfig {
                                 "/api/auth/trainer/register",
                                 "/api/auth/login").permitAll()
                         .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/", "/index.html", "/style.css", "/app.js", "/favicon.ico",
+                                "/api/training-types").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, exception) ->

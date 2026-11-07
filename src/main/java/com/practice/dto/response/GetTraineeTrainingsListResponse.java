@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 @Builder
 public record GetTraineeTrainingsListResponse(
+        Long id,
         String trainingName,
         LocalDate trainingDate,
         String trainingType,
